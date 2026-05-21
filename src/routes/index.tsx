@@ -1,26 +1,295 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { LiveMap } from "@/components/live-map";
+import { Radar, MapPin, ShieldCheck, Activity, Zap, Sparkles, ArrowRight, Check, ChevronRight, Bell, Users, BarChart3, Lock, Globe2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "GeoFence — Real-Time Smart Monitoring Platform" },
+      { name: "description", content: "Track. Protect. Monitor. AI-powered GPS geofencing for schools, organizations and security teams." },
+      { property: "og:title", content: "GeoFence — Real-Time Smart Monitoring" },
+      { property: "og:description", content: "AI-powered GPS geofencing platform with live tracking, automated attendance and SOS alerts." },
+    ],
+  }),
+  component: Landing,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function Landing() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 gradient-hero opacity-70" />
+      <div className="pointer-events-none fixed inset-0 grid-bg grid-bg-fade opacity-60" />
+
+      {/* Nav */}
+      <header className="relative z-20">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="size-9 rounded-xl gradient-primary flex items-center justify-center glow-cyan">
+              <Radar className="size-5 text-primary-foreground" />
+            </div>
+            <span className="font-display text-lg font-bold tracking-tight">GeoFence</span>
+          </Link>
+          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+            <a href="#features" className="hover:text-foreground transition">Features</a>
+            <a href="#preview" className="hover:text-foreground transition">Live Demo</a>
+            <a href="#pricing" className="hover:text-foreground transition">Pricing</a>
+            <a href="#testimonials" className="hover:text-foreground transition">Customers</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground transition">Sign in</Link>
+            <Link to="/dashboard" className="group inline-flex items-center gap-1.5 rounded-full gradient-primary text-primary-foreground text-sm font-semibold px-4 py-2 glow-cyan hover:scale-105 transition-transform">
+              Launch Dashboard <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition" />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-20 lg:pt-20 lg:pb-32">
+        <div className="grid lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-6">
+            <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-mono text-muted-foreground">
+              <Sparkles className="size-3 text-cyan" /> AI · GPS · GEOFENCE INTELLIGENCE
+            </div>
+            <h1 className="mt-6 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.02] tracking-tight">
+              Real-Time <span className="text-gradient">Smart GeoFence</span> Monitoring
+            </h1>
+            <p className="mt-6 text-lg text-muted-foreground max-w-xl">
+              Track. Protect. Monitor. The next-generation platform for schools, campuses and security teams —
+              powered by AI-driven location intelligence and live geofence telemetry.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/dashboard" className="group inline-flex items-center gap-2 rounded-full gradient-primary text-primary-foreground font-semibold px-6 py-3 glow-cyan hover:scale-[1.03] transition">
+                Get Started <ArrowRight className="size-4 group-hover:translate-x-0.5 transition" />
+              </Link>
+              <a href="#preview" className="inline-flex items-center gap-2 rounded-full glass px-6 py-3 font-semibold hover:bg-white/10 transition">
+                <Activity className="size-4 text-cyan" /> Live Demo
+              </a>
+            </div>
+            <div className="mt-12 flex items-center gap-8 text-xs text-muted-foreground">
+              <div>
+                <div className="font-display text-2xl font-bold text-foreground">99.98%</div>
+                <div>Uptime SLA</div>
+              </div>
+              <div className="w-px h-10 bg-border" />
+              <div>
+                <div className="font-display text-2xl font-bold text-foreground">2.4M+</div>
+                <div>Locations / day</div>
+              </div>
+              <div className="w-px h-10 bg-border" />
+              <div>
+                <div className="font-display text-2xl font-bold text-foreground">&lt;120ms</div>
+                <div>Alert latency</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 relative">
+            <div className="absolute -inset-8 gradient-violet opacity-20 blur-3xl rounded-full" />
+            <div className="relative float-y">
+              <LiveMap height={520} />
+            </div>
+            {/* Floating cards */}
+            <div className="hidden md:block absolute -left-6 top-10 glass rounded-2xl p-3 w-56 glow-cyan">
+              <div className="flex items-center gap-2">
+                <div className="size-9 rounded-xl bg-success/20 text-success flex items-center justify-center"><ShieldCheck className="size-4" /></div>
+                <div>
+                  <div className="text-xs font-semibold">Zone Safe</div>
+                  <div className="text-[10px] text-muted-foreground">128 students inside</div>
+                </div>
+              </div>
+            </div>
+            <div className="hidden md:block absolute -right-4 bottom-8 glass rounded-2xl p-3 w-60">
+              <div className="flex items-center gap-2">
+                <div className="size-9 rounded-xl bg-danger/20 text-danger flex items-center justify-center"><Bell className="size-4" /></div>
+                <div>
+                  <div className="text-xs font-semibold">SOS Triggered</div>
+                  <div className="text-[10px] text-muted-foreground">Maya · East Gate · just now</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Logo cloud */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pb-10">
+        <p className="text-center text-xs uppercase tracking-[0.25em] text-muted-foreground">Trusted by leading institutions</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-x-12 gap-y-4 opacity-60">
+          {["NORTHGATE UNIV.", "META ACADEMY", "PALANTECH", "AURORA HIGH", "ZENITH CAMPUS", "HELIX LABS"].map((n) => (
+            <div key={n} className="font-display font-semibold tracking-wider text-sm">{n}</div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// CAPABILITIES</span>
+          <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">A command center for the physical world</h2>
+          <p className="mt-4 text-muted-foreground">Every tool you need to monitor, secure and orchestrate people across geofenced spaces — unified in one beautiful surface.</p>
+        </div>
+
+        <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {([
+            { Icon: MapPin, title: "Live GPS Tracking", desc: "Stream device positions with sub-second latency on an interactive map.", color: "cyan" },
+            { Icon: Hex, title: "Smart Geofencing", desc: "Draw circular or polygon zones. Get notified the instant entries or exits occur.", color: "violet" },
+            { Icon: ShieldCheck, title: "SOS Emergency", desc: "One-tap distress signals route to responders with full context in milliseconds.", color: "danger" },
+            { Icon: Users, title: "Auto Attendance", desc: "Presence is detected automatically when devices enter a learning zone.", color: "success" },
+            { Icon: BarChart3, title: "Movement Analytics", desc: "AI-derived heatmaps, traffic flows and dwell-time insights for any zone.", color: "cyan" },
+            { Icon: Lock, title: "Privacy-First", desc: "End-to-end encryption, role-based access and full audit logs by default.", color: "violet" },
+          ] as const).map((f, i) => (
+            <FeatureCard key={i} {...f} />
+          ))}
+        </div>
+      </section>
+
+      {/* Preview */}
+      <section id="preview" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// LIVE DEMO</span>
+            <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Watch reality stream in.</h2>
+            <p className="mt-4 text-muted-foreground">Markers update in realtime. Zones glow when occupied. Alerts cascade through the activity feed the moment they happen — all rendered through our edge-native pipeline.</p>
+            <ul className="mt-6 space-y-3">
+              {["Sub-second telemetry refresh", "Animated entry / exit events", "AI anomaly detection", "Heatmap & dwell-time overlays"].map((t) => (
+                <li key={t} className="flex items-center gap-3 text-sm">
+                  <div className="size-5 rounded-full bg-cyan/20 text-cyan flex items-center justify-center"><Check className="size-3" /></div>
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <Link to="/tracking" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-cyan hover:underline">
+              Open live tracking <ChevronRight className="size-4" />
+            </Link>
+          </div>
+          <div className="relative">
+            <LiveMap height={460} />
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// VOICES</span>
+          <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Loved by operations teams.</h2>
+        </div>
+        <div className="mt-12 grid md:grid-cols-3 gap-5">
+          {[
+            { name: "Dr. Reyna Chen", role: "Dean, Northgate University", quote: "We replaced three separate tools with GeoFence. Our response times dropped by 64%." },
+            { name: "Marcus Vidal", role: "Head of Security, Aurora High", quote: "It feels less like a dashboard and more like superpowers. The maps are unreal." },
+            { name: "Priya Kapoor", role: "Operations Lead, Helix Labs", quote: "The SOS pipeline alone justifies the platform. It's the calmest emergency stack we've shipped." },
+          ].map((t) => (
+            <div key={t.name} className="glass rounded-3xl p-6 relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 size-32 rounded-full bg-violet/20 blur-3xl" />
+              <p className="text-sm leading-relaxed">"{t.quote}"</p>
+              <div className="mt-6 flex items-center gap-3">
+                <div className="size-10 rounded-xl gradient-violet flex items-center justify-center font-bold text-sm">{t.name.split(" ").map(n=>n[0]).join("")}</div>
+                <div>
+                  <div className="text-sm font-semibold">{t.name}</div>
+                  <div className="text-xs text-muted-foreground">{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// PRICING</span>
+          <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Scale at the speed of trust.</h2>
+        </div>
+        <div className="mt-12 grid md:grid-cols-3 gap-5">
+          {[
+            { name: "Starter", price: "$0", desc: "For pilot programs.", features: ["Up to 50 trackers", "3 active zones", "Standard analytics", "Email alerts"], cta: "Start free" },
+            { name: "Pro", price: "$49", desc: "For growing campuses.", features: ["Unlimited trackers", "Unlimited zones", "AI insights", "SOS pipeline", "Priority support"], cta: "Start trial", featured: true },
+            { name: "Enterprise", price: "Custom", desc: "For institutions.", features: ["SSO + audit logs", "On-prem option", "Dedicated CSM", "SLA 99.99%"], cta: "Talk to sales" },
+          ].map((p) => (
+            <div key={p.name} className={`relative glass rounded-3xl p-7 ${p.featured ? "animated-border glow-violet" : ""}`}>
+              {p.featured && <span className="absolute -top-3 left-7 text-[10px] font-mono uppercase tracking-widest rounded-full gradient-primary text-primary-foreground px-2 py-0.5">Most popular</span>}
+              <div className="font-display text-lg font-semibold">{p.name}</div>
+              <div className="mt-3 flex items-end gap-1">
+                <span className="font-display text-5xl font-bold tracking-tight">{p.price}</span>
+                {p.price !== "Custom" && <span className="text-sm text-muted-foreground mb-1">/mo</span>}
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
+              <ul className="mt-6 space-y-2 text-sm">
+                {p.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2"><Check className="size-4 text-cyan" />{f}</li>
+                ))}
+              </ul>
+              <button className={`mt-8 w-full rounded-full py-3 text-sm font-semibold transition ${p.featured ? "gradient-primary text-primary-foreground" : "glass hover:bg-white/10"}`}>
+                {p.cta}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative z-10 max-w-5xl mx-auto px-6 pb-24">
+        <div className="relative glass-strong rounded-[2.5rem] p-12 lg:p-16 overflow-hidden animated-border">
+          <div className="absolute -top-20 -right-20 size-80 rounded-full bg-cyan/30 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 size-80 rounded-full bg-violet/30 blur-3xl" />
+          <div className="relative text-center">
+            <Globe2 className="mx-auto size-10 text-cyan" />
+            <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Bring your world online.</h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">Provision your first geofence in under 60 seconds.</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link to="/signup" className="rounded-full gradient-primary text-primary-foreground font-semibold px-7 py-3 glow-cyan hover:scale-105 transition">Start free trial</Link>
+              <Link to="/dashboard" className="rounded-full glass px-7 py-3 font-semibold hover:bg-white/10 transition">See dashboard</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="relative z-10 border-t border-border/50">
+        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="size-7 rounded-lg gradient-primary flex items-center justify-center">
+              <Radar className="size-3.5 text-primary-foreground" />
+            </div>
+            <span className="font-display font-semibold text-foreground">GeoFence</span>
+            <span>© {new Date().getFullYear()}</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <a href="#" className="hover:text-foreground">Privacy</a>
+            <a href="#" className="hover:text-foreground">Terms</a>
+            <a href="#" className="hover:text-foreground">Security</a>
+            <a href="#" className="hover:text-foreground">Status</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function Index() {
-  return <PlaceholderIndex />;
+function Hex(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    </svg>
+  );
+}
+
+function FeatureCard({ Icon, title, desc, color }: { Icon: any; title: string; desc: string; color: "cyan" | "violet" | "danger" | "success" }) {
+  const colorMap: Record<string, string> = {
+    cyan: "from-cyan/25 text-cyan", violet: "from-violet/25 text-violet", danger: "from-danger/25 text-danger", success: "from-success/25 text-success",
+  };
+  return (
+    <div className="group relative glass rounded-3xl p-6 hover:-translate-y-1 transition overflow-hidden">
+      <div className={`absolute -top-16 -right-16 size-40 rounded-full bg-gradient-to-br blur-3xl opacity-60 group-hover:opacity-100 transition ${colorMap[color]}`} />
+      <div className={`relative size-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${colorMap[color]}`}>
+        <Icon className="size-5" />
+      </div>
+      <h3 className="relative mt-5 font-display font-semibold text-lg">{title}</h3>
+      <p className="relative mt-2 text-sm text-muted-foreground">{desc}</p>
+      <div className="relative mt-5 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition">
+        Learn more <ArrowRight className="size-3 group-hover:translate-x-0.5 transition" />
+      </div>
+    </div>
+  );
 }
