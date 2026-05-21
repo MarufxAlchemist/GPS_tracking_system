@@ -131,14 +131,14 @@ function Landing() {
         </div>
 
         <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[
+          {([
             { Icon: MapPin, title: "Live GPS Tracking", desc: "Stream device positions with sub-second latency on an interactive map.", color: "cyan" },
             { Icon: Hex, title: "Smart Geofencing", desc: "Draw circular or polygon zones. Get notified the instant entries or exits occur.", color: "violet" },
             { Icon: ShieldCheck, title: "SOS Emergency", desc: "One-tap distress signals route to responders with full context in milliseconds.", color: "danger" },
             { Icon: Users, title: "Auto Attendance", desc: "Presence is detected automatically when devices enter a learning zone.", color: "success" },
             { Icon: BarChart3, title: "Movement Analytics", desc: "AI-derived heatmaps, traffic flows and dwell-time insights for any zone.", color: "cyan" },
             { Icon: Lock, title: "Privacy-First", desc: "End-to-end encryption, role-based access and full audit logs by default.", color: "violet" },
-          ].map((f, i) => (
+          ] as const).map((f, i) => (
             <FeatureCard key={i} {...f} />
           ))}
         </div>
