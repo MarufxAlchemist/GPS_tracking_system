@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZonesRouteImport } from './routes/zones'
 import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as StudentRouteImport } from './routes/student'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -32,6 +33,11 @@ const TrackingRoute = TrackingRouteImport.update({
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
   path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
+    | '/sitemap.xml'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StudentRoute: typeof StudentRoute
   TrackingRoute: typeof TrackingRoute
   ZonesRoute: typeof ZonesRoute
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StudentRoute: StudentRoute,
   TrackingRoute: TrackingRoute,
   ZonesRoute: ZonesRoute,
