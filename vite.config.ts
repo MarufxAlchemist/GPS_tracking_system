@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 // import cloudflare from "@cloudflare/vite-plugin"; // Uncomment if using cloudflare deployment
 
 export default defineConfig({
+  // Expose both VITE_ (standard) and NEXT_PUBLIC_ (from shared .env.local) to client code
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   plugins: [
     tsconfigPaths(),
     tailwindcss(),
@@ -16,3 +18,4 @@ export default defineConfig({
     // cloudflare(),
   ],
 });
+

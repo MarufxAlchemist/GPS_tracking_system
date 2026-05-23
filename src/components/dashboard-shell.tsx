@@ -1,6 +1,6 @@
+import React, { useState, ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, MapPin, Hexagon, ClipboardCheck, Bell, BarChart3, ShieldAlert, Settings, Radar, ChevronLeft } from "lucide-react";
-import { useState, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Search, Bell as BellIcon, ChevronDown } from "lucide-react";
 
@@ -13,7 +13,8 @@ const NAV = [
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/sos", label: "SOS Reports", icon: ShieldAlert },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+] satisfies { to: string; label: string; icon: React.ElementType }[];
+
 
 export function DashboardShell({ children, title, subtitle }: { children: ReactNode; title: string; subtitle?: string }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -56,7 +57,8 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
               return (
                 <Link
                   key={item.to}
-                  to={item.to}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  to={item.to as any}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
                     active

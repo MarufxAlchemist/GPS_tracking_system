@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { GeoState } from "@/hooks/use-geolocation";
 
 type Marker = { id: string; x: number; y: number; vx: number; vy: number; status: "safe" | "warn" | "alert"; name: string };
 
@@ -6,7 +7,31 @@ const NAMES = ["Aarav", "Maya", "Liam", "Zara", "Noah", "Eva", "Kai", "Mia", "Le
 
 function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
 
-export function LiveMap({ height = 520, compact = false }: { height?: number; compact?: boolean }) {
+/**
+ * Map real-world lat/lon to SVG % coordinates [0..100].
+ * We use a simple linear mapping anchored at the Equator / Prime Meridian center (0,0),
+ * scaled to fit the globe ellipse in the SVG viewport.
+ * Result is clamped to [8, 92] so the dot stays inside the visible area.
+ */
+function latLonToSvg(lat: number, lon: number): { x: number; y: number } {
+  // Mercator-inspired linear projection mapped to 0–100 SVG space
+  const x = ((lon + 180) / 360) * 100;
+  // Flip y because SVG y increases downward
+  const y = ((90 - lat) / 180) * 100;
+  return {
+    x: Math.min(92, Math.max(8, x)),
+    y: Math.min(88, Math.max(12, y)),
+  };
+}
+
+interface LiveMapProps {
+  height?: number;
+  compact?: boolean;
+  /** Real-world geolocation state from useGeolocation hook */
+  geoState?: GeoState;
+}
+
+export function LiveMap({ height = 520, compact = false, geoState }: LiveMapProps) {
   const [markers, setMarkers] = useState<Marker[]>(() =>
     Array.from({ length: compact ? 4 : 9 }, (_, i) => ({
       id: String(i),
@@ -44,6 +69,12 @@ export function LiveMap({ height = 520, compact = false }: { height?: number; co
 
   const statusColor = (s: Marker["status"]) =>
     s === "safe" ? "var(--success)" : s === "warn" ? "var(--warning)" : "var(--danger)";
+
+  // Real user position
+  const realUser = geoState?.status === "active" ? latLonToSvg(geoState.lat, geoState.lon) : null;
+  const realLat = geoState?.status === "active" ? geoState.lat : null;
+  const realLon = geoState?.status === "active" ? geoState.lon : null;
+  const realAccuracy = geoState?.status === "active" ? geoState.accuracy : null;
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl glass-strong" style={{ height }}>
@@ -95,9 +126,21 @@ export function LiveMap({ height = 520, compact = false }: { height?: number; co
             <circle cx={z.cx} cy={z.cy} r={z.r} fill="none" stroke={z.color} strokeOpacity="0.2" strokeWidth="0.15" strokeDasharray="1 1" />
           </g>
         ))}
+        {/* Real user accuracy ring */}
+        {realUser && (
+          <circle
+            cx={realUser.x}
+            cy={realUser.y}
+            r={2.5}
+            fill="oklch(0.82 0.16 200 / 0.12)"
+            stroke="oklch(0.82 0.16 200 / 0.5)"
+            strokeWidth="0.15"
+            strokeDasharray="0.5 0.5"
+          />
+        )}
       </svg>
 
-      {/* Markers */}
+      {/* Demo markers */}
       {markers.map((m) => (
         <div
           key={m.id}
@@ -122,17 +165,69 @@ export function LiveMap({ height = 520, compact = false }: { height?: number; co
         </div>
       ))}
 
-      {/* Corner HUD */}
+      {/* Real "You" marker */}
+      {realUser && (
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
+          style={{ left: `${realUser.x}%`, top: `${realUser.y}%` }}
+        >
+          <div className="relative">
+            {/* outer pulse */}
+            <span
+              className="absolute inset-0 m-auto size-4 rounded-full pulse-ring"
+              style={{ background: "var(--cyan)", opacity: 0.8 }}
+            />
+            {/* Accuracy circle animation */}
+            <span
+              className="absolute inset-0 m-auto size-5 rounded-full"
+              style={{
+                background: "oklch(0.82 0.16 200 / 0.15)",
+                border: "1px solid oklch(0.82 0.16 200 / 0.4)",
+              }}
+            />
+            {/* Dot */}
+            <span
+              className="relative block size-4 rounded-full ring-2 ring-background"
+              style={{ background: "var(--cyan)", boxShadow: "0 0 18px var(--cyan)" }}
+            />
+            {/* Label */}
+            <span
+              className="absolute left-5 top-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] font-mono font-bold px-2 py-0.5 rounded-md"
+              style={{
+                background: "oklch(0.82 0.16 200 / 0.2)",
+                border: "1px solid oklch(0.82 0.16 200 / 0.4)",
+                color: "var(--cyan)",
+              }}
+            >
+              📍 You
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Corner HUD — top left */}
       <div className="absolute top-4 left-4 glass rounded-2xl px-3 py-2 flex items-center gap-2">
         <span className="relative flex size-2">
           <span className="absolute inset-0 rounded-full bg-success pulse-ring opacity-70" />
           <span className="relative rounded-full bg-success size-2" />
         </span>
-        <span className="text-xs font-mono">LIVE · {markers.length} TRACKED</span>
+        <span className="text-xs font-mono">LIVE · {markers.length + (realUser ? 1 : 0)} TRACKED</span>
       </div>
+
+      {/* Coordinates HUD — bottom right */}
       <div className="absolute bottom-4 right-4 glass rounded-2xl px-3 py-2 font-mono text-[10px] text-muted-foreground">
-        LAT 12.9716° · LON 77.5946°
+        {realLat !== null && realLon !== null
+          ? `LAT ${realLat.toFixed(4)}° · LON ${realLon.toFixed(4)}°`
+          : "LAT 12.9716° · LON 77.5946°"}
       </div>
+
+      {/* Accuracy badge — only when real GPS is active */}
+      {realAccuracy !== null && (
+        <div className="absolute top-4 right-4 glass rounded-2xl px-3 py-2 font-mono text-[10px]" style={{ color: "var(--cyan)" }}>
+          ±{Math.round(realAccuracy)}m accuracy
+        </div>
+      )}
+
       {!compact && (
         <div className="absolute bottom-4 left-4 glass rounded-2xl p-2 flex gap-1">
           {["+", "−", "⊕"].map((s) => (
