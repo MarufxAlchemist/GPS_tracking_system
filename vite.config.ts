@@ -6,8 +6,21 @@ import tailwindcss from "@tailwindcss/vite";
 // import cloudflare from "@cloudflare/vite-plugin"; // Uncomment if using cloudflare deployment
 
 export default defineConfig({
+  server: {
+    allowedHosts: [
+      'backing-unwired-vehicular.ngrok-free.dev'
+    ]
+  },
+
   // Expose both VITE_ (standard) and NEXT_PUBLIC_ (from shared .env.local) to client code
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
+
+  ssr: {
+    // Prevent leaflet and react-leaflet from being bundled in SSR —
+    // they require `window` and must only run in the browser.
+    external: ["leaflet", "react-leaflet"],
+  },
+
   plugins: [
     tsconfigPaths(),
     tailwindcss(),
@@ -18,4 +31,3 @@ export default defineConfig({
     // cloudflare(),
   ],
 });
-

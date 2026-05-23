@@ -1,13 +1,28 @@
-import { useEffect, useState, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+/**
+ * LiveTrackingMap
+ *
+ * Renders a real-time Leaflet map with markers for all users stored in the
+ * Supabase `live_locations` table. Subscribes to realtime INSERT/UPDATE events.
+ *
+ * IMPORTANT: This component must only be loaded client-side (never during SSR).
+ * Use React.lazy() + Suspense to import it, as done in the route files.
+ */
+
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
+// Leaflet is imported here but this module is only ever evaluated client-side
+// because we mark it as SSR-external in vite.config.ts and lazy-load it in routes.
 import L from "leaflet";
+import { AlertTriangle, X, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useGeofenceMonitor } from "@/hooks/use-geofence-monitor";
+import { type GeofenceZone } from "@/lib/geofence";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface LocationRow {
+export interface LocationRow {
   user_id: string;
   latitude: number;
   longitude: number;
@@ -23,12 +38,16 @@ interface LiveTrackingMapProps {
   zoom?: number;
   /** Optional: highlight a specific user_id with a different style */
   highlightUserId?: string;
+  /** Geofence zones to render and monitor */
+  zones?: GeofenceZone[];
   /** Extra CSS class applied to the wrapper div */
   className?: string;
+  /** Called whenever the tracked locations map changes */
+  onLocationsChange?: (locations: Map<string, LocationRow>) => void;
 }
 
 // ---------------------------------------------------------------------------
-// Custom marker icons
+// Custom marker icons — created lazily inside the component (client-only)
 // ---------------------------------------------------------------------------
 
 function createPulsingIcon(color: string, highlighted = false): L.DivIcon {
@@ -58,9 +77,6 @@ function createPulsingIcon(color: string, highlighted = false): L.DivIcon {
   });
 }
 
-const defaultIcon = createPulsingIcon("oklch(0.82 0.16 200)"); // cyan
-const highlightIcon = createPulsingIcon("oklch(0.78 0.17 65)", true); // warm amber
-
 // ---------------------------------------------------------------------------
 // Sub-component: smoothly animates marker to new position
 // ---------------------------------------------------------------------------
@@ -76,32 +92,39 @@ function AnimatedMarker({
 }) {
   const markerRef = useRef<L.Marker | null>(null);
   const prevPos = useRef<[number, number]>(position);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const marker = markerRef.current;
     if (!marker) return;
 
-    // If position changed, smoothly animate
     if (prevPos.current[0] !== position[0] || prevPos.current[1] !== position[1]) {
-      const start = prevPos.current;
+      const start: [number, number] = [prevPos.current[0], prevPos.current[1]];
       const end = position;
-      const duration = 800; // ms
+      const duration = 800;
       const startTime = performance.now();
 
-      function animate(now: number) {
+      const animate = (now: number) => {
         const elapsed = now - startTime;
         const t = Math.min(elapsed / duration, 1);
-        // ease-out cubic
         const ease = 1 - Math.pow(1 - t, 3);
         const lat = start[0] + (end[0] - start[0]) * ease;
         const lng = start[1] + (end[1] - start[1]) * ease;
-        marker!.setLatLng([lat, lng]);
-        if (t < 1) requestAnimationFrame(animate);
-      }
+        if (markerRef.current) {
+          markerRef.current.setLatLng([lat, lng]);
+        }
+        if (t < 1) {
+          rafRef.current = requestAnimationFrame(animate);
+        }
+      };
 
-      requestAnimationFrame(animate);
+      rafRef.current = requestAnimationFrame(animate);
       prevPos.current = position;
     }
+
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
   }, [position]);
 
   return (
@@ -112,7 +135,7 @@ function AnimatedMarker({
 }
 
 // ---------------------------------------------------------------------------
-// Sub-component: auto-fits bounds when markers change
+// Sub-component: auto-fits bounds when markers first arrive
 // ---------------------------------------------------------------------------
 
 function FitBounds({ positions }: { positions: [number, number][] }) {
@@ -121,8 +144,12 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
 
   useEffect(() => {
     if (positions.length === 0 || fitted.current) return;
-    const bounds = L.latLngBounds(positions.map(([lat, lng]) => [lat, lng]));
-    map.fitBounds(bounds.pad(0.3), { maxZoom: 16, animate: true });
+    if (positions.length === 1) {
+      map.setView(positions[0], 15, { animate: true });
+    } else {
+      const bounds = L.latLngBounds(positions);
+      map.fitBounds(bounds.pad(0.3), { maxZoom: 16, animate: true });
+    }
     fitted.current = true;
   }, [positions, map]);
 
@@ -138,16 +165,29 @@ export function LiveTrackingMap({
   center = [20, 0],
   zoom = 3,
   highlightUserId,
+  zones = [],
   className = "",
+  onLocationsChange,
 }: LiveTrackingMapProps) {
   const [locations, setLocations] = useState<Map<string, LocationRow>>(new Map());
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "error">("connecting");
+
+  // Create icons once per mount (client-only, safe here since this module is SSR-external)
+  const defaultIcon = useRef<L.DivIcon | null>(null);
+  const highlightIcon = useRef<L.DivIcon | null>(null);
+  if (!defaultIcon.current) defaultIcon.current = createPulsingIcon("oklch(0.82 0.16 200)");
+  if (!highlightIcon.current) highlightIcon.current = createPulsingIcon("oklch(0.78 0.17 65)", true);
+
+  // Unique channel name per mount to avoid stale subscription collisions
+  const channelName = useRef(`live_locations_${Date.now()}`);
 
   // -----------------------------------------------------------------------
   // 1. Fetch initial data from live_locations
   // -----------------------------------------------------------------------
   useEffect(() => {
     async function fetchInitial() {
+      console.log("[LiveTrackingMap] Fetching initial locations from live_locations…");
+
       const { data, error } = await supabase
         .from("live_locations")
         .select("user_id, latitude, longitude, updated_at");
@@ -157,12 +197,23 @@ export function LiveTrackingMap({
         return;
       }
 
+      console.log(`[LiveTrackingMap] Initial fetch returned ${data?.length ?? 0} row(s):`, data);
+
       if (data && data.length > 0) {
         setLocations((prev) => {
           const next = new Map(prev);
           for (const row of data) {
-            next.set(row.user_id, row as LocationRow);
+            if (
+              row &&
+              typeof row.latitude === "number" &&
+              typeof row.longitude === "number" &&
+              !isNaN(row.latitude) &&
+              !isNaN(row.longitude)
+            ) {
+              next.set(row.user_id, row as LocationRow);
+            }
           }
+          console.log(`[LiveTrackingMap] Location map now has ${next.size} user(s)`);
           return next;
         });
       }
@@ -175,63 +226,96 @@ export function LiveTrackingMap({
   // 2. Supabase Realtime subscription for INSERT and UPDATE
   // -----------------------------------------------------------------------
   useEffect(() => {
+    console.log(`[LiveTrackingMap] Subscribing to realtime on channel "${channelName.current}"…`);
+
+    const handleRow = (row: LocationRow, event: "INSERT" | "UPDATE") => {
+      if (
+        !row ||
+        typeof row.latitude !== "number" ||
+        typeof row.longitude !== "number" ||
+        isNaN(row.latitude) ||
+        isNaN(row.longitude)
+      ) {
+        console.warn("[LiveTrackingMap] Ignoring row with invalid coords:", row);
+        return;
+      }
+
+      console.log(`[LiveTrackingMap] Realtime ${event} received for user ${row.user_id}:`, {
+        lat: row.latitude,
+        lon: row.longitude,
+        at: row.updated_at,
+      });
+
+      setLocations((prev) => {
+        const next = new Map(prev);
+        next.set(row.user_id, row);
+        console.log(`[LiveTrackingMap] Location map now has ${next.size} user(s)`);
+        return next;
+      });
+    };
+
     const channel = supabase
-      .channel("live_locations_realtime")
+      .channel(channelName.current)
       .on<LocationRow>(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "live_locations",
-        },
-        (payload) => {
-          const row = payload.new;
-          setLocations((prev) => {
-            const next = new Map(prev);
-            next.set(row.user_id, row);
-            return next;
-          });
-        },
+        { event: "INSERT", schema: "public", table: "live_locations" },
+        (payload) => handleRow(payload.new, "INSERT"),
       )
       .on<LocationRow>(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "live_locations",
-        },
-        (payload) => {
-          const row = payload.new;
-          setLocations((prev) => {
-            const next = new Map(prev);
-            next.set(row.user_id, row);
-            return next;
-          });
-        },
+        { event: "UPDATE", schema: "public", table: "live_locations" },
+        (payload) => handleRow(payload.new, "UPDATE"),
       )
       .subscribe((status) => {
+        console.log("[LiveTrackingMap] Realtime subscription status:", status);
         if (status === "SUBSCRIBED") {
           setConnectionStatus("connected");
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setConnectionStatus("error");
-          console.error("[LiveTrackingMap] Realtime subscription error:", status);
+          console.error("[LiveTrackingMap] Realtime subscription failed with status:", status);
         }
       });
 
     return () => {
+      console.log(`[LiveTrackingMap] Removing realtime channel "${channelName.current}"`);
       void supabase.removeChannel(channel);
     };
   }, []);
 
   // -----------------------------------------------------------------------
-  // Derived data
+  // Notify parent whenever locations map changes
   // -----------------------------------------------------------------------
-  const markers = useMemo(() => Array.from(locations.values()), [locations]);
+  const onLocationsChangeRef = useRef(onLocationsChange);
+  useEffect(() => { onLocationsChangeRef.current = onLocationsChange; }, [onLocationsChange]);
+
+  useEffect(() => {
+    onLocationsChangeRef.current?.(locations);
+  }, [locations]);
+
+  // -----------------------------------------------------------------------
+  // Derived data & Geofence Monitor
+  // -----------------------------------------------------------------------
+  const markers = useMemo(
+    () => Array.from(locations.values()).filter(
+      (m) => m && typeof m.latitude === "number" && typeof m.longitude === "number" &&
+        !isNaN(m.latitude) && !isNaN(m.longitude)
+    ),
+    [locations],
+  );
 
   const positions = useMemo<[number, number][]>(
     () => markers.map((m) => [m.latitude, m.longitude]),
     [markers],
   );
+
+  const highlightedLoc = highlightUserId ? locations.get(highlightUserId) : undefined;
+
+  const { alerts, zoneStatus, dismissAlert } = useGeofenceMonitor({
+    userId: highlightUserId ?? "unknown",
+    zones,
+    latitude: highlightedLoc?.latitude ?? null,
+    longitude: highlightedLoc?.longitude ?? null,
+  });
 
   // -----------------------------------------------------------------------
   // Render
@@ -249,7 +333,6 @@ export function LiveTrackingMap({
           0%   { transform: scale(0.7); opacity: 0.6; }
           100% { transform: scale(2.2); opacity: 0; }
         }
-        /* Override Leaflet defaults for dark theme */
         .leaflet-container {
           background: oklch(0.14 0.025 265) !important;
           font-family: var(--font-sans), system-ui, sans-serif !important;
@@ -309,27 +392,41 @@ export function LiveTrackingMap({
         {/* Auto-fit bounds on first data load */}
         <FitBounds positions={positions} />
 
+        {/* Geofence zone circles */}
+        {zones.map((zone) => {
+          const isSafe = zoneStatus.get(zone.id) ?? true;
+          const color = zone.color || (isSafe ? "oklch(0.6 0.15 150)" : "oklch(0.6 0.2 25)");
+          return (
+            <Circle
+              key={zone.id}
+              center={[zone.latitude, zone.longitude]}
+              radius={zone.radiusMetres}
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.15,
+                weight: 2,
+                dashArray: isSafe ? "5, 5" : undefined,
+              }}
+            />
+          );
+        })}
+
         {/* Realtime markers */}
         {markers.map((loc) => {
           const isHighlighted = loc.user_id === highlightUserId;
+          const icon = isHighlighted ? highlightIcon.current! : defaultIcon.current!;
           return (
             <AnimatedMarker
               key={loc.user_id}
               position={[loc.latitude, loc.longitude]}
-              icon={isHighlighted ? highlightIcon : defaultIcon}
+              icon={icon}
             >
               <Popup>
                 <div style={{ minWidth: 160 }}>
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 8,
-                  }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <span style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
+                      width: 8, height: 8, borderRadius: "50%",
                       background: isHighlighted ? "oklch(0.78 0.17 65)" : "oklch(0.82 0.16 200)",
                       boxShadow: `0 0 8px ${isHighlighted ? "oklch(0.78 0.17 65)" : "oklch(0.82 0.16 200)"}`,
                       flexShrink: 0,
@@ -359,7 +456,18 @@ export function LiveTrackingMap({
         })}
       </MapContainer>
 
-      {/* Connection status HUD — top left overlay */}
+      {/* Empty state overlay — shown when connected but no users yet */}
+      {connectionStatus === "connected" && markers.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[999]">
+          <div className="glass rounded-2xl px-6 py-4 text-center space-y-2">
+            <Users className="size-8 mx-auto text-muted-foreground opacity-60" />
+            <p className="text-sm font-medium text-muted-foreground">No users tracked yet</p>
+            <p className="text-xs text-muted-foreground/70">Allow location access on any device<br />sharing this URL to see them here.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Connection status HUD — top left */}
       <div
         className="absolute top-4 left-4 z-[1000] glass rounded-2xl px-3 py-2 flex items-center gap-2"
         style={{ pointerEvents: "none" }}
@@ -383,6 +491,31 @@ export function LiveTrackingMap({
           {connectionStatus === "connecting" && "CONNECTING…"}
           {connectionStatus === "error" && "CONNECTION ERROR"}
         </span>
+      </div>
+
+      {/* Alerts HUD — top right */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 max-w-sm" style={{ pointerEvents: "none" }}>
+        {alerts.filter(a => !a.dismissed).map(alert => (
+          <div
+            key={alert.id}
+            className="glass border border-danger/30 bg-danger/10 p-3 rounded-xl shadow-lg flex items-start gap-3 backdrop-blur-md"
+            style={{ pointerEvents: "auto" }}
+          >
+            <AlertTriangle className="size-5 shrink-0" style={{ color: "var(--danger)" }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Zone Breach: {alert.breach.zoneName}</p>
+              <p className="text-xs opacity-90 truncate">
+                User {alert.breach.userId.slice(0, 8)} is {Math.round(alert.breach.overshootMetres)}m outside.
+              </p>
+            </div>
+            <button
+              onClick={() => dismissAlert(alert.id)}
+              className="shrink-0 p-1 hover:bg-white/10 rounded-md transition-colors"
+            >
+              <X className="size-4 opacity-70" />
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

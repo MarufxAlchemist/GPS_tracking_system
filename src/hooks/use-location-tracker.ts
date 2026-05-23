@@ -97,10 +97,12 @@ export function useLocationTracker({
 
       // Throttle: skip if we upserted too recently (and it's not the first call)
       if (lastUpsertAtRef.current !== 0 && now - lastUpsertAtRef.current < intervalMs) {
+        console.log(`[useLocationTracker] Skipping upsert (throttled, next in ${Math.round((intervalMs - (now - lastUpsertAtRef.current)) / 1000)}s)`);
         return;
       }
 
       const updatedAt = new Date().toISOString();
+      console.log(`[useLocationTracker] Upserting location for user ${userId}:`, { latitude, longitude, updatedAt });
 
       const { error } = await supabase.from("live_locations").upsert(
         {
@@ -110,21 +112,21 @@ export function useLocationTracker({
           updated_at: updatedAt,
         },
         {
-          onConflict: "user_id", // upsert key — ensure live_locations has a UNIQUE constraint on user_id
+          onConflict: "user_id",
         },
       );
 
       if (error) {
-        console.error("[useLocationTracker] Supabase upsert failed:", error.message);
+        console.error("[useLocationTracker] Supabase upsert failed:", error.message, error);
         onErrorRef.current?.(error);
         return;
       }
 
+      console.log(`[useLocationTracker] Upsert successful for user ${userId} at ${updatedAt}`);
       lastUpsertAtRef.current = now;
       lastSyncedAtRef.current = updatedAt;
       onSyncRef.current?.(latitude, longitude);
 
-      // Update React state with the new sync timestamp (partial update pattern)
       setTrackerStatus((prev) =>
         prev.status === "tracking"
           ? { ...prev, lastSyncedAt: updatedAt }
@@ -157,7 +159,15 @@ export function useLocationTracker({
       (position: GeolocationPosition) => {
         const { latitude, longitude, accuracy, heading, speed } = position.coords;
 
-        // Update React state immediately (UI is always up-to-date)
+        console.log(`[useLocationTracker] GPS update for user ${userId}:`, {
+          latitude,
+          longitude,
+          accuracy,
+          heading,
+          speed,
+          timestamp: new Date(position.timestamp).toISOString(),
+        });
+
         setTrackerStatus({
           status: "tracking",
           latitude,
@@ -168,7 +178,6 @@ export function useLocationTracker({
           lastSyncedAt: lastSyncedAtRef.current,
         });
 
-        // Throttled Supabase write (fire-and-forget; errors handled inside)
         void upsertLocation(latitude, longitude);
       },
 

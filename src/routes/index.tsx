@@ -1,8 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { LiveMap } from "@/components/live-map";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { useLocationTracker } from "@/hooks/use-location-tracker";
+import { ClientOnly } from "@/components/client-only";
 import { Radar, MapPin, ShieldCheck, Activity, Sparkles, ArrowRight, Check, ChevronRight, Bell, Users, BarChart3, Lock, Globe2, Navigation, Wifi, AlertCircle, Crosshair } from "lucide-react";
+
+// Leaflet map lazy-loaded so it never runs during SSR
+const LiveTrackingMap = lazy(() =>
+  import("@/components/live-tracking-map").then((mod) => ({ default: mod.LiveTrackingMap }))
+);
+
+const MapFallback = ({ height = 520 }: { height?: number }) => (
+  <div
+    style={{ height }}
+    className="w-full bg-slate-950/40 rounded-3xl border border-border/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-muted-foreground text-sm font-medium"
+  >
+    <Radar className="size-8 text-cyan animate-pulse" />
+    <span>Initializing secure tracking map...</span>
+  </div>
+);
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,9 +31,30 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+// Helper to get or create a device ID
+function getDeviceId() {
+  if (typeof window === "undefined") return "00000000-0000-0000-0000-000000000000";
+  let id = localStorage.getItem("device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+
 function Landing() {
-  const [geoEnabled, setGeoEnabled] = useState(false);
-  const geoState = useGeolocation(geoEnabled);
+  const [geoEnabled, setGeoEnabled] = useState(true); // Auto-start on open
+  const [deviceId] = useState(() => getDeviceId());
+  
+  const { trackerStatus, start, stop } = useLocationTracker({
+    userId: deviceId,
+    intervalMs: 5000,
+  });
+
+  useEffect(() => {
+    if (geoEnabled) start();
+    else stop();
+  }, [geoEnabled, start, stop]);
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <div className="pointer-events-none fixed inset-0 gradient-hero opacity-70" />
@@ -91,7 +127,11 @@ function Landing() {
           <div className="lg:col-span-6 relative">
             <div className="absolute -inset-8 gradient-violet opacity-20 blur-3xl rounded-full" />
             <div className="relative float-y">
-              <LiveMap height={520} />
+              <ClientOnly fallback={<MapFallback height={520} />}>
+                <Suspense fallback={<MapFallback height={520} />}>
+                  <LiveTrackingMap height={520} highlightUserId={deviceId} />
+                </Suspense>
+              </ClientOnly>
             </div>
             {/* Floating cards */}
             <div className="hidden md:block absolute -left-6 top-10 glass rounded-2xl p-3 w-56 glow-cyan">
@@ -173,7 +213,7 @@ function Landing() {
                   </div>
                 </div>
 
-                {geoState.status === "idle" && (
+                {trackerStatus.status === "idle" && (
                   <>
                     <p className="text-sm text-muted-foreground mb-5">Click below to share your location. Your browser will ask for permission — your data never leaves your device.</p>
                     <button
@@ -186,7 +226,7 @@ function Landing() {
                   </>
                 )}
 
-                {geoState.status === "requesting" && (
+                {trackerStatus.status === "requesting" && (
                   <div className="flex flex-col items-center gap-3 py-4">
                     <div className="size-10 rounded-full border-2 border-cyan/40 border-t-cyan animate-spin" />
                     <p className="text-sm text-muted-foreground text-center">Waiting for browser permission…</p>
@@ -194,7 +234,7 @@ function Landing() {
                   </div>
                 )}
 
-                {geoState.status === "active" && (
+                {trackerStatus.status === "tracking" && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--success)" }}>
                       <span className="relative flex size-2.5">
@@ -206,19 +246,19 @@ function Landing() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="glass rounded-xl p-3">
                         <div className="text-[10px] font-mono text-muted-foreground uppercase">Latitude</div>
-                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{geoState.lat.toFixed(5)}°</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{trackerStatus.latitude.toFixed(5)}°</div>
                       </div>
                       <div className="glass rounded-xl p-3">
                         <div className="text-[10px] font-mono text-muted-foreground uppercase">Longitude</div>
-                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{geoState.lon.toFixed(5)}°</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{trackerStatus.longitude.toFixed(5)}°</div>
                       </div>
                       <div className="glass rounded-xl p-3">
                         <div className="text-[10px] font-mono text-muted-foreground uppercase">Accuracy</div>
-                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--success)" }}>±{Math.round(geoState.accuracy)}m</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--success)" }}>±{Math.round(trackerStatus.accuracy)}m</div>
                       </div>
                       <div className="glass rounded-xl p-3">
                         <div className="text-[10px] font-mono text-muted-foreground uppercase">Heading</div>
-                        <div className="font-mono text-sm font-bold mt-0.5">{geoState.heading !== null ? `${Math.round(geoState.heading)}°` : "N/A"}</div>
+                        <div className="font-mono text-sm font-bold mt-0.5">{trackerStatus.heading !== null ? `${Math.round(trackerStatus.heading)}°` : "N/A"}</div>
                       </div>
                     </div>
                     <button
@@ -230,11 +270,11 @@ function Landing() {
                   </div>
                 )}
 
-                {geoState.status === "error" && (
+                {trackerStatus.status === "error" && (
                   <div className="space-y-3">
                     <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/10 border border-danger/20">
                       <AlertCircle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
-                      <p className="text-xs" style={{ color: "var(--danger)" }}>{geoState.message}</p>
+                      <p className="text-xs" style={{ color: "var(--danger)" }}>{trackerStatus.message}</p>
                     </div>
                     <button
                       onClick={() => { setGeoEnabled(false); setTimeout(() => setGeoEnabled(true), 100); }}
@@ -273,8 +313,12 @@ function Landing() {
 
           {/* Right — live map */}
           <div className="lg:col-span-3 relative">
-            <LiveMap height={520} geoState={geoState} />
-            {geoState.status !== "active" && (
+            <ClientOnly fallback={<MapFallback height={520} />}>
+              <Suspense fallback={<MapFallback height={520} />}>
+                <LiveTrackingMap height={520} highlightUserId={deviceId} />
+              </Suspense>
+            </ClientOnly>
+            {trackerStatus.status !== "tracking" && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="glass-strong rounded-2xl px-5 py-3 text-center pointer-events-auto">
                   <div className="text-sm font-medium">Demo markers active</div>
