@@ -31,12 +31,19 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-// Helper to get or create a device ID
 function getDeviceId() {
   if (typeof window === "undefined") return "00000000-0000-0000-0000-000000000000";
   let id = localStorage.getItem("device_id");
   if (!id) {
-    id = crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = crypto.randomUUID();
+    } else {
+      // Fallback for non-secure contexts (HTTP over local IP) where crypto.randomUUID is undefined
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
     localStorage.setItem("device_id", id);
   }
   return id;

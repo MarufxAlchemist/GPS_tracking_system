@@ -161,8 +161,9 @@ export function useGeofenceMonitor({
   // Supabase Realtime: listen for alerts from OTHER clients
   // -----------------------------------------------------------------------
   useEffect(() => {
+    const channelName = `alerts_realtime_${userId}_${Date.now()}_${Math.random().toString(36).substring(2)}`;
     const channel = supabase
-      .channel("alerts_realtime")
+      .channel(channelName)
       .on<AlertRow>(
         "postgres_changes",
         {

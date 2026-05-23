@@ -178,9 +178,6 @@ export function LiveTrackingMap({
   if (!defaultIcon.current) defaultIcon.current = createPulsingIcon("oklch(0.82 0.16 200)");
   if (!highlightIcon.current) highlightIcon.current = createPulsingIcon("oklch(0.78 0.17 65)", true);
 
-  // Unique channel name per mount to avoid stale subscription collisions
-  const channelName = useRef(`live_locations_${Date.now()}`);
-
   // -----------------------------------------------------------------------
   // 1. Fetch initial data from live_locations
   // -----------------------------------------------------------------------
@@ -226,7 +223,8 @@ export function LiveTrackingMap({
   // 2. Supabase Realtime subscription for INSERT and UPDATE
   // -----------------------------------------------------------------------
   useEffect(() => {
-    console.log(`[LiveTrackingMap] Subscribing to realtime on channel "${channelName.current}"…`);
+    const uniqueChannelName = `live_locations_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    console.log(`[LiveTrackingMap] Subscribing to realtime on channel "${uniqueChannelName}"…`);
 
     const handleRow = (row: LocationRow, event: "INSERT" | "UPDATE") => {
       if (
@@ -255,7 +253,7 @@ export function LiveTrackingMap({
     };
 
     const channel = supabase
-      .channel(channelName.current)
+      .channel(uniqueChannelName)
       .on<LocationRow>(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "live_locations" },
@@ -277,7 +275,7 @@ export function LiveTrackingMap({
       });
 
     return () => {
-      console.log(`[LiveTrackingMap] Removing realtime channel "${channelName.current}"`);
+      console.log(`[LiveTrackingMap] Removing realtime channel "${uniqueChannelName}"`);
       void supabase.removeChannel(channel);
     };
   }, []);
