@@ -56,7 +56,7 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
               return (
                 <Link
                   key={item.to}
-                  to={item.to}
+                  to={item.to as any}
                   className={cn(
                     "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
                     active
