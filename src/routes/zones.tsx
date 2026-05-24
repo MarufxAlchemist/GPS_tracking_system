@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { LiveMap } from "@/components/live-map";
 import { ZoneEditModal, type ZoneData } from "@/components/zone-edit-modal";
+import { ClientOnly } from "@/components/client-only";
 import { QRCodeSVG } from "qrcode.react";
 import { Hexagon, Circle, QrCode, Plus, Trash2, Edit3, AlertTriangle, Download, Copy } from "lucide-react";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/zones")({
@@ -38,9 +39,10 @@ function Zones() {
 
   // Zone code derived from name — updated live
   const zoneCode = name.trim().toUpperCase().replace(/\s+/g, "-").slice(0, 16) || "NEW-GEOFENCE";
-  const qrUrl = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://geofence.app";
-    return `${origin}/student?join=${encodeURIComponent(zoneCode)}&shape=${shape}&radius=${radius}`;
+  // Build URL only client-side (window is undefined on server)
+  const [qrUrl, setQrUrl] = useState("");
+  useEffect(() => {
+    setQrUrl(`${window.location.origin}/student?join=${encodeURIComponent(zoneCode)}&shape=${shape}&radius=${radius}`);
   }, [zoneCode, shape, radius]);
 
   const handleSave = () => {
@@ -147,23 +149,29 @@ function Zones() {
 
             {/* Live QR code */}
             <div className="mt-3 grid place-items-center p-5 rounded-2xl bg-white/5">
-              <div className="p-3 bg-white rounded-2xl shadow-lg">
-                <QRCodeSVG
-                  ref={qrRef}
-                  value={qrUrl}
-                  size={160}
-                  bgColor="#ffffff"
-                  fgColor="#0a0e1a"
-                  level="M"
-                  marginSize={1}
-                  imageSettings={{
-                    src: "/favicon.ico",
-                    height: 28,
-                    width: 28,
-                    excavate: true,
-                  }}
-                />
-              </div>
+              <ClientOnly fallback={
+                <div className="size-44 rounded-2xl bg-white/10 animate-pulse flex items-center justify-center">
+                  <QrCode className="size-8 text-muted-foreground opacity-40" />
+                </div>
+              }>
+                <div className="p-3 bg-white rounded-2xl shadow-lg">
+                  <QRCodeSVG
+                    ref={qrRef}
+                    value={qrUrl}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#0a0e1a"
+                    level="M"
+                    marginSize={1}
+                    imageSettings={{
+                      src: "/favicon.ico",
+                      height: 28,
+                      width: 28,
+                      excavate: true,
+                    }}
+                  />
+                </div>
+              </ClientOnly>
             </div>
 
             {/* Zone code chip */}

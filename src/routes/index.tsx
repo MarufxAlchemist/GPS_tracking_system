@@ -155,7 +155,7 @@ function Landing() {
                 <div className="size-9 rounded-xl bg-danger/20 text-danger flex items-center justify-center"><Bell className="size-4" /></div>
                 <div>
                   <div className="text-xs font-semibold">SOS Triggered</div>
-                  <div className="text-[10px] text-muted-foreground">Maya · East Gate · just now</div>
+                  <div className="text-[10px] text-muted-foreground">Maruf · East Gate · just now</div>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@ function Landing() {
       <section className="relative z-10 max-w-7xl mx-auto px-6 pb-10">
         <p className="text-center text-xs uppercase tracking-[0.25em] text-muted-foreground">Trusted by leading institutions</p>
         <div className="mt-6 flex flex-wrap justify-center gap-x-12 gap-y-4 opacity-60">
-          {["NORTHGATE UNIV.", "META ACADEMY", "PALANTECH", "AURORA HIGH", "ZENITH CAMPUS", "HELIX LABS"].map((n) => (
+          {["PVPIT BUDHGAON"].map((n) => (
             <div key={n} className="font-display font-semibold tracking-wider text-sm">{n}</div>
           ))}
         </div>

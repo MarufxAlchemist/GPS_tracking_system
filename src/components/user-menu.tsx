@@ -51,10 +51,10 @@ export function UserMenu({ open, onClose, anchorRef }: Props) {
       {/* User info */}
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl gradient-violet flex items-center justify-center text-sm font-bold">AK</div>
+          <img src="/profile.jpg" alt="Profile" className="size-10 rounded-xl object-cover border border-white/10" />
           <div>
-            <div className="text-sm font-semibold">Ananya K.</div>
-            <div className="text-[11px] text-muted-foreground">ananya@campus.edu</div>
+            <div className="text-sm font-semibold">Maruf N.</div>
+            <div className="text-[11px] text-muted-foreground">maruf@pvpit.edu.in</div>
             <div className="text-[10px] text-cyan font-mono mt-0.5">Admin · Pro plan</div>
           </div>
         </div>

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "372bae7e-1b2a-48a0-892b-7d94df6645a2",
+    "user_id": "test-user",
+    "username": null,
+    "latitude": 16.878,
+    "longitude": 74.596,
+    "updated_at": "2026-05-23T17:30:46.879179"
+  },
+  {
+    "id": "3c0bf399-1727-4dae-9048-aa2a60a141bf",
+    "user_id": "USER-ALICE",
+    "username": null,
+    "latitude": 16.8782,
+    "longitude": 74.5961,
+    "updated_at": "2026-05-24T09:21:22.519"
+  },
+  {
+    "id": "35907003-826c-45c0-921b-2ee7df7decf3",
+    "user_id": "USER-BOB",
+    "username": null,
+    "latitude": 16.8791,
+    "longitude": 74.5975,
+    "updated_at": "2026-05-24T09:21:22.52"
+  },
+  {
+    "id": "2f4777d3-e9fb-4bc4-bf7d-b1036022c243",
+    "user_id": "USER-CHARLIE",
+    "username": null,
+    "latitude": 16.8775,
+    "longitude": 74.5952,
+    "updated_at": "2026-05-24T09:21:22.52"
+  },
+  {
+    "id": "dd9792fc-a6a9-4233-b98d-2856e9931630",
+    "user_id": "USER-DAVID",
+    "username": null,
+    "latitude": 16.8802,
+    "longitude": 74.5981,
+    "updated_at": "2026-05-24T09:21:22.52"
+  }
+]

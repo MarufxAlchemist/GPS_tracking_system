@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { Search, Bell as BellIcon, ChevronDown } from "lucide-react";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { UserMenu } from "@/components/user-menu";
-import { UpgradeModal } from "@/components/upgrade-modal";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,7 +24,6 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
   const [collapsed, setCollapsed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
@@ -108,22 +106,6 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
               );
             })}
           </nav>
-
-          {!collapsed && (
-            <div className="p-3">
-              <div className="glass rounded-2xl p-4 relative overflow-hidden">
-                <div className="absolute -top-8 -right-8 size-24 rounded-full bg-violet/30 blur-2xl" />
-                <p className="text-xs font-display font-semibold">Upgrade to Pro</p>
-                <p className="text-[11px] text-muted-foreground mt-1">Unlimited zones & AI insights.</p>
-                <button
-                  onClick={() => setUpgradeOpen(true)}
-                  className="mt-3 w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2 hover:scale-[1.02] transition"
-                >
-                  Upgrade
-                </button>
-              </div>
-            </div>
-          )}
         </aside>
 
         {/* Main */}
@@ -169,9 +151,9 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
                   onClick={() => setUserMenuOpen((v) => !v)}
                   className="flex items-center gap-2 glass rounded-xl pl-1 pr-3 py-1 hover:bg-white/10 transition"
                 >
-                  <div className="size-8 rounded-lg gradient-violet flex items-center justify-center text-xs font-bold">AK</div>
+                  <img src="/profile.jpg" alt="Profile" className="size-8 rounded-lg object-cover border border-white/10" />
                   <div className="text-left hidden sm:block">
-                    <div className="text-xs font-semibold leading-tight">Ananya K.</div>
+                    <div className="text-xs font-semibold leading-tight">Maruf N.</div>
                     <div className="text-[10px] text-muted-foreground">Admin</div>
                   </div>
                   <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", userMenuOpen && "rotate-180")} />
@@ -196,7 +178,6 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
 
       {/* Overlays */}
       <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
-      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </div>
   );
 }

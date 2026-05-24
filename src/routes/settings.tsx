@@ -43,8 +43,8 @@ function Toggle({ label, sub, checked, onChange }: { label: string; sub?: string
 
 function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [name, setName] = useState("Ananya Krishnamurthy");
-  const [email, setEmail] = useState("ananya@northgate.edu");
+  const [name, setName] = useState("Maruf Nadaf");
+  const [email, setEmail] = useState("maruf@pvpit.edu.in");
   const [phone, setPhone] = useState("+91 98765 43210");
   const [notifs, setNotifs] = useState({
     sos: true,
@@ -61,9 +61,9 @@ function Settings() {
   const save = () => toast.success("Settings saved!");
 
   const team = [
-    { name: "Omar Hassan", role: "Security Lead", email: "omar@campus.edu", avatar: "OH" },
-    { name: "Priya Nair", role: "Teacher", email: "priya@campus.edu", avatar: "PN" },
-    { name: "Sam Rivera", role: "Admin", email: "sam@campus.edu", avatar: "SR" },
+    { name: "Neeraj Sonar", role: "Security Lead", email: "neeraj@campus.edu", avatar: "NS" },
+    { name: "Amol Jagdale", role: "Teacher", email: "amol@campus.edu", avatar: "AJ" },
+    { name: "Dhanashree Dhokate", role: "Admin", email: "dhanashree@campus.edu", avatar: "DD" },
   ];
 
   return (
@@ -96,7 +96,7 @@ function Settings() {
             <>
               <h2 className="font-display font-semibold text-lg">Profile Information</h2>
               <div className="flex items-center gap-4">
-                <div className="size-16 rounded-2xl gradient-violet flex items-center justify-center text-xl font-bold">AK</div>
+                <img src="/profile.jpg" alt="Profile" className="size-16 rounded-2xl object-cover shadow-lg border border-white/10" />
                 <div>
                   <button onClick={() => toast.info("Photo upload coming soon.")} className="text-sm text-cyan hover:underline">Change photo</button>
                   <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG up to 5MB</p>
@@ -119,10 +119,10 @@ function Settings() {
                 ))}
                 <label className="block">
                   <span className="text-xs text-muted-foreground">Role</span>
-                  <select className="mt-1.5 w-full h-11 px-3 rounded-xl bg-white/5 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-cyan/40">
-                    <option>Admin</option>
-                    <option>Teacher</option>
-                    <option>Security</option>
+                  <select className="mt-1.5 w-full h-11 px-3 rounded-xl bg-white/5 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-cyan/40 appearance-none">
+                    <option className="bg-[#0f1423] text-foreground">Admin</option>
+                    <option className="bg-[#0f1423] text-foreground">Teacher</option>
+                    <option className="bg-[#0f1423] text-foreground">Security</option>
                   </select>
                 </label>
               </div>

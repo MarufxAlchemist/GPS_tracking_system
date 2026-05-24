@@ -3,7 +3,7 @@ import type { GeoState } from "@/hooks/use-geolocation";
 
 type Marker = { id: string; x: number; y: number; vx: number; vy: number; status: "safe" | "warn" | "alert"; name: string };
 
-const NAMES = ["Aarav", "Maya", "Liam", "Zara", "Noah", "Eva", "Kai", "Mia", "Leo", "Aria", "Ravi", "Iris"];
+const NAMES = ["Maruf", "Gautam", "Anuja", "Samidha", "Harsh", "Tushar", "Sameer", "Jerry", "Tejas", "Maruf N.", "Gautam I.", "Anuja N."];
 
 function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
 
