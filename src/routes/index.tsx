@@ -1,6 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { LiveMap } from "@/components/live-map";
-import { Radar, MapPin, ShieldCheck, Activity, Zap, Sparkles, ArrowRight, Check, ChevronRight, Bell, Users, BarChart3, Lock, Globe2 } from "lucide-react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { useLocationTracker } from "@/hooks/use-location-tracker";
+import { ClientOnly } from "@/components/client-only";
+import { Radar, MapPin, ShieldCheck, Activity, Sparkles, ArrowRight, Check, ChevronRight, Bell, Users, BarChart3, Lock, Globe2, Navigation, Wifi, AlertCircle, Crosshair } from "lucide-react";
+
+// Leaflet map lazy-loaded so it never runs during SSR
+const LiveTrackingMap = lazy(() =>
+  import("@/components/live-tracking-map").then((mod) => ({ default: mod.LiveTrackingMap }))
+);
+
+const MapFallback = ({ height = 520 }: { height?: number }) => (
+  <div
+    style={{ height }}
+    className="w-full bg-slate-950/40 rounded-3xl border border-border/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 text-muted-foreground text-sm font-medium"
+  >
+    <Radar className="size-8 text-cyan animate-pulse" />
+    <span>Initializing secure tracking map...</span>
+  </div>
+);
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,7 +31,37 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+function getDeviceId() {
+  if (typeof window === "undefined") return "00000000-0000-0000-0000-000000000000";
+  let id = localStorage.getItem("device_id");
+  if (!id) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = crypto.randomUUID();
+    } else {
+      // Fallback for non-secure contexts (HTTP over local IP) where crypto.randomUUID is undefined
+      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+
 function Landing() {
+  const [geoEnabled, setGeoEnabled] = useState(true); // Auto-start on open
+  const [deviceId] = useState(() => getDeviceId());
+  
+  const { trackerStatus, start, stop } = useLocationTracker({
+    userId: deviceId,
+    intervalMs: 5000,
+  });
+
+  useEffect(() => {
+    if (geoEnabled) start();
+    else stop();
+  }, [geoEnabled, start, stop]);
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
       <div className="pointer-events-none fixed inset-0 gradient-hero opacity-70" />
@@ -32,7 +79,7 @@ function Landing() {
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition">Features</a>
             <a href="#preview" className="hover:text-foreground transition">Live Demo</a>
-            <a href="#pricing" className="hover:text-foreground transition">Pricing</a>
+
             <a href="#testimonials" className="hover:text-foreground transition">Customers</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -87,7 +134,11 @@ function Landing() {
           <div className="lg:col-span-6 relative">
             <div className="absolute -inset-8 gradient-violet opacity-20 blur-3xl rounded-full" />
             <div className="relative float-y">
-              <LiveMap height={520} />
+              <ClientOnly fallback={<MapFallback height={520} />}>
+                <Suspense fallback={<MapFallback height={520} />}>
+                  <LiveTrackingMap height={520} highlightUserId={deviceId} />
+                </Suspense>
+              </ClientOnly>
             </div>
             {/* Floating cards */}
             <div className="hidden md:block absolute -left-6 top-10 glass rounded-2xl p-3 w-56 glow-cyan">
@@ -144,27 +195,144 @@ function Landing() {
         </div>
       </section>
 
-      {/* Preview */}
+      {/* Live GPS Try Demo */}
       <section id="preview" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// LIVE DEMO</span>
-            <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Watch reality stream in.</h2>
-            <p className="mt-4 text-muted-foreground">Markers update in realtime. Zones glow when occupied. Alerts cascade through the activity feed the moment they happen — all rendered through our edge-native pipeline.</p>
-            <ul className="mt-6 space-y-3">
-              {["Sub-second telemetry refresh", "Animated entry / exit events", "AI anomaly detection", "Heatmap & dwell-time overlays"].map((t) => (
-                <li key={t} className="flex items-center gap-3 text-sm">
-                  <div className="size-5 rounded-full bg-cyan/20 text-cyan flex items-center justify-center"><Check className="size-3" /></div>
-                  {t}
-                </li>
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// TRY IT LIVE</span>
+          <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Your location. Right now.</h2>
+          <p className="mt-4 text-muted-foreground">GeoFence tracks real people in real time. Share your location to see exactly how our platform captures, maps, and displays live GPS data — straight from your device.</p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-6 items-start">
+          {/* Left panel — controls + info */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* CTA card */}
+            <div className="relative glass-strong rounded-3xl p-6 overflow-hidden animated-border">
+              <div className="absolute -top-12 -right-12 size-40 rounded-full bg-cyan/20 blur-3xl" />
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="size-10 rounded-2xl gradient-primary flex items-center justify-center glow-cyan">
+                    <Navigation className="size-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <div className="font-display font-semibold">Live GPS Demo</div>
+                    <div className="text-xs text-muted-foreground">Browser-native · No signup needed</div>
+                  </div>
+                </div>
+
+                {trackerStatus.status === "idle" && (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-5">Click below to share your location. Your browser will ask for permission — your data never leaves your device.</p>
+                    <button
+                      id="share-location-btn"
+                      onClick={() => setGeoEnabled(true)}
+                      className="w-full rounded-2xl gradient-primary text-primary-foreground font-semibold py-3.5 flex items-center justify-center gap-2 glow-cyan hover:scale-[1.02] transition-transform"
+                    >
+                      <Crosshair className="size-4" /> Share My Location
+                    </button>
+                  </>
+                )}
+
+                {trackerStatus.status === "requesting" && (
+                  <div className="flex flex-col items-center gap-3 py-4">
+                    <div className="size-10 rounded-full border-2 border-cyan/40 border-t-cyan animate-spin" />
+                    <p className="text-sm text-muted-foreground text-center">Waiting for browser permission…</p>
+                    <button onClick={() => setGeoEnabled(false)} className="text-xs text-muted-foreground hover:text-foreground underline">Cancel</button>
+                  </div>
+                )}
+
+                {trackerStatus.status === "tracking" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--success)" }}>
+                      <span className="relative flex size-2.5">
+                        <span className="absolute inset-0 rounded-full bg-success pulse-ring opacity-80" />
+                        <span className="relative rounded-full bg-success size-2.5" />
+                      </span>
+                      Location active — streaming live
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="glass rounded-xl p-3">
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">Latitude</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{trackerStatus.latitude.toFixed(5)}°</div>
+                      </div>
+                      <div className="glass rounded-xl p-3">
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">Longitude</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--cyan)" }}>{trackerStatus.longitude.toFixed(5)}°</div>
+                      </div>
+                      <div className="glass rounded-xl p-3">
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">Accuracy</div>
+                        <div className="font-mono text-sm font-bold mt-0.5" style={{ color: "var(--success)" }}>±{Math.round(trackerStatus.accuracy)}m</div>
+                      </div>
+                      <div className="glass rounded-xl p-3">
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">Heading</div>
+                        <div className="font-mono text-sm font-bold mt-0.5">{trackerStatus.heading !== null ? `${Math.round(trackerStatus.heading)}°` : "N/A"}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setGeoEnabled(false)}
+                      className="w-full rounded-xl glass py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition"
+                    >
+                      Stop sharing
+                    </button>
+                  </div>
+                )}
+
+                {trackerStatus.status === "error" && (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/10 border border-danger/20">
+                      <AlertCircle className="size-4 shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
+                      <p className="text-xs" style={{ color: "var(--danger)" }}>{trackerStatus.message}</p>
+                    </div>
+                    <button
+                      onClick={() => { setGeoEnabled(false); setTimeout(() => setGeoEnabled(true), 100); }}
+                      className="w-full rounded-xl gradient-primary text-primary-foreground text-sm font-semibold py-2.5"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Feature bullets */}
+            <div className="glass rounded-3xl p-5 space-y-3">
+              {[
+                { icon: Wifi, label: "Real-time telemetry", desc: "Position updates as you move" },
+                { icon: MapPin, label: "Geofence detection", desc: "Entry & exit events in milliseconds" },
+                { icon: Activity, label: "Movement analytics", desc: "Speed, heading & dwell time" },
+              ].map(({ icon: Icon, label, desc }) => (
+                <div key={label} className="flex items-start gap-3">
+                  <div className="size-8 rounded-xl bg-cyan/10 flex items-center justify-center shrink-0" style={{ color: "var(--cyan)" }}>
+                    <Icon className="size-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{label}</div>
+                    <div className="text-xs text-muted-foreground">{desc}</div>
+                  </div>
+                </div>
               ))}
-            </ul>
-            <Link to="/tracking" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-cyan hover:underline">
-              Open live tracking <ChevronRight className="size-4" />
+            </div>
+
+            <Link to="/tracking" className="inline-flex items-center gap-2 text-sm font-semibold text-cyan hover:underline">
+              Open full tracking dashboard <ChevronRight className="size-4" />
             </Link>
           </div>
-          <div className="relative">
-            <LiveMap height={460} />
+
+          {/* Right — live map */}
+          <div className="lg:col-span-3 relative">
+            <ClientOnly fallback={<MapFallback height={520} />}>
+              <Suspense fallback={<MapFallback height={520} />}>
+                <LiveTrackingMap height={520} highlightUserId={deviceId} />
+              </Suspense>
+            </ClientOnly>
+            {trackerStatus.status !== "tracking" && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="glass-strong rounded-2xl px-5 py-3 text-center pointer-events-auto">
+                  <div className="text-sm font-medium">Demo markers active</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Share your location to add your real pin 📍</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -196,38 +364,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
-        <div className="text-center max-w-2xl mx-auto">
-          <span className="text-xs uppercase tracking-[0.25em] text-cyan font-mono">// PRICING</span>
-          <h2 className="mt-4 font-display text-4xl lg:text-5xl font-bold tracking-tight">Scale at the speed of trust.</h2>
-        </div>
-        <div className="mt-12 grid md:grid-cols-3 gap-5">
-          {[
-            { name: "Starter", price: "$0", desc: "For pilot programs.", features: ["Up to 50 trackers", "3 active zones", "Standard analytics", "Email alerts"], cta: "Start free" },
-            { name: "Pro", price: "$49", desc: "For growing campuses.", features: ["Unlimited trackers", "Unlimited zones", "AI insights", "SOS pipeline", "Priority support"], cta: "Start trial", featured: true },
-            { name: "Enterprise", price: "Custom", desc: "For institutions.", features: ["SSO + audit logs", "On-prem option", "Dedicated CSM", "SLA 99.99%"], cta: "Talk to sales" },
-          ].map((p) => (
-            <div key={p.name} className={`relative glass rounded-3xl p-7 ${p.featured ? "animated-border glow-violet" : ""}`}>
-              {p.featured && <span className="absolute -top-3 left-7 text-[10px] font-mono uppercase tracking-widest rounded-full gradient-primary text-primary-foreground px-2 py-0.5">Most popular</span>}
-              <div className="font-display text-lg font-semibold">{p.name}</div>
-              <div className="mt-3 flex items-end gap-1">
-                <span className="font-display text-5xl font-bold tracking-tight">{p.price}</span>
-                {p.price !== "Custom" && <span className="text-sm text-muted-foreground mb-1">/mo</span>}
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
-              <ul className="mt-6 space-y-2 text-sm">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2"><Check className="size-4 text-cyan" />{f}</li>
-                ))}
-              </ul>
-              <button className={`mt-8 w-full rounded-full py-3 text-sm font-semibold transition ${p.featured ? "gradient-primary text-primary-foreground" : "glass hover:bg-white/10"}`}>
-                {p.cta}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+
 
       {/* CTA */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-24">
