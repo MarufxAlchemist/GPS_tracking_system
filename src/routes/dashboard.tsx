@@ -46,11 +46,11 @@ function Dashboard() {
             <h2 className="font-display text-lg font-semibold">Realtime Alerts</h2>
             <span className="text-[10px] font-mono text-muted-foreground glass rounded-full px-2 py-1">12 today</span>
           </div>
-          <AlertCard severity="emergency" title="SOS Triggered" user="Maya Verma · ID 4421" location="East Gate" time="just now" description="Distress signal received. Responders dispatched." />
-          <AlertCard severity="warning" title="Left Geofence" user="Kai Tanaka · ID 3187" location="Campus A perimeter" time="2 min ago" />
-          <AlertCard severity="warning" title="Idle outside zone" user="Iris Bloom · ID 2204" location="Library annex" time="6 min ago" />
-          <AlertCard severity="safe" title="Returned to zone" user="Leo Park · ID 1109" location="Field" time="11 min ago" />
-          <AlertCard severity="safe" title="Attendance marked" user="Eva Lin · ID 0982" location="Block C" time="18 min ago" />
+          <AlertCard severity="emergency" title="SOS Triggered" user="Maruf Nadaf · ID 4421" location="East Gate" time="just now" description="Distress signal received. Responders dispatched." />
+          <AlertCard severity="warning" title="Left Geofence" user="Anuja Naik · ID 3187" location="Campus A perimeter" time="2 min ago" />
+          <AlertCard severity="warning" title="Idle outside zone" user="Samidha Ghorpade · ID 2204" location="Library annex" time="6 min ago" />
+          <AlertCard severity="safe" title="Returned to zone" user="Tushar Dhanawade · ID 1109" location="Field" time="11 min ago" />
+          <AlertCard severity="safe" title="Attendance marked" user="Sameer Barathe · ID 0982" location="Block C" time="18 min ago" />
         </div>
       </div>
 

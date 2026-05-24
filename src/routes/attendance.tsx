@@ -21,15 +21,15 @@ interface Student {
 }
 
 const STUDENTS: Student[] = [
-  { id: "s1", name: "Maya Verma", studentId: "ID 4421", zone: "Campus A", status: "present", time: "8:12 AM", block: "Block A" },
-  { id: "s2", name: "Noah Kim", studentId: "ID 3001", zone: "Hostel Block C", status: "absent", time: "—", block: "Block B" },
-  { id: "s3", name: "Kai Tanaka", studentId: "ID 3187", zone: "Outside", status: "late", time: "9:41 AM", block: "Block A" },
-  { id: "s4", name: "Iris Bloom", studentId: "ID 2204", zone: "Library", status: "present", time: "8:05 AM", block: "Block C" },
-  { id: "s5", name: "Aria Bose", studentId: "ID 5511", zone: "Field", status: "present", time: "8:18 AM", block: "Block B" },
-  { id: "s6", name: "Leo Park", studentId: "ID 1109", zone: "Field", status: "present", time: "8:22 AM", block: "Block A" },
-  { id: "s7", name: "Eva Lin", studentId: "ID 0982", zone: "Block C", status: "present", time: "8:09 AM", block: "Block C" },
-  { id: "s8", name: "Aarav Shah", studentId: "ID 0021", zone: "Library", status: "late", time: "9:15 AM", block: "Block B" },
-  { id: "s9", name: "Zara Ahmed", studentId: "ID 6677", zone: "Campus A", status: "present", time: "8:30 AM", block: "Block A" },
+  { id: "s1", name: "Maruf Nadaf", studentId: "ID 4421", zone: "Campus A", status: "present", time: "8:12 AM", block: "Block A" },
+  { id: "s2", name: "Gautam Iyengar", studentId: "ID 3001", zone: "Hostel Block C", status: "absent", time: "—", block: "Block B" },
+  { id: "s3", name: "Anuja Naik", studentId: "ID 3187", zone: "Outside", status: "late", time: "9:41 AM", block: "Block A" },
+  { id: "s4", name: "Samidha Ghorpade", studentId: "ID 2204", zone: "Library", status: "present", time: "8:05 AM", block: "Block C" },
+  { id: "s5", name: "Harsh Joshi", studentId: "ID 5511", zone: "Field", status: "present", time: "8:18 AM", block: "Block B" },
+  { id: "s6", name: "Tushar Dhanawade", studentId: "ID 1109", zone: "Field", status: "present", time: "8:22 AM", block: "Block A" },
+  { id: "s7", name: "Sameer Barathe", studentId: "ID 0982", zone: "Block C", status: "present", time: "8:09 AM", block: "Block C" },
+  { id: "s8", name: "Jerry Dsouza", studentId: "ID 0021", zone: "Library", status: "late", time: "9:15 AM", block: "Block B" },
+  { id: "s9", name: "Tejas Mane", studentId: "ID 6677", zone: "Campus A", status: "present", time: "8:30 AM", block: "Block A" },
   { id: "s10", name: "Riya Menon", studentId: "ID 7890", zone: "Cafeteria", status: "absent", time: "—", block: "Block C" },
 ];
 

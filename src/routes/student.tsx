@@ -1,22 +1,36 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { LiveMap } from "@/components/live-map";
 import { JoinZoneModal } from "@/components/join-zone-modal";
 import { Radar, ShieldCheck, Battery, Wifi, MapPin, ChevronRight, AlertOctagon, ClipboardCheck, Hexagon, Bell } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student")({
   head: () => ({ meta: [{ title: "My Status — GeoFence" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    join: typeof search.join === "string" ? search.join : undefined,
+    shape: typeof search.shape === "string" ? search.shape : undefined,
+    radius: typeof search.radius === "string" ? Number(search.radius) : undefined,
+  }),
   component: Student,
 });
 
 function Student() {
+  const { join: joinCode } = useSearch({ from: "/student" });
   const [joinOpen, setJoinOpen] = useState(false);
-  const [sosProgress, setSosProgress] = useState(0); // 0–100
+  const [sosProgress, setSosProgress] = useState(0);
   const [sosFired, setSosFired] = useState(false);
   const holdInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStart = useRef<number>(0);
-  const HOLD_DURATION = 1500; // ms
+  const HOLD_DURATION = 1500;
+
+  // Auto-handle QR scan deep link
+  useEffect(() => {
+    if (joinCode) {
+      toast.success(`📍 QR Scanned! Joining zone "${joinCode}"`, { duration: 5000 });
+      setJoinOpen(true);
+    }
+  }, [joinCode]);
 
   const startHold = useCallback(() => {
     if (sosFired) return;

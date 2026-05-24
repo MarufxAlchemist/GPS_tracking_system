@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { LiveMap } from "@/components/live-map";
 import { ZoneEditModal, type ZoneData } from "@/components/zone-edit-modal";
-import { Hexagon, Circle, QrCode, Plus, Trash2, Edit3, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { Hexagon, Circle, QrCode, Plus, Trash2, Edit3, AlertTriangle, Download, Copy } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/zones")({
@@ -33,6 +34,14 @@ function Zones() {
   const [editingZone, setEditingZone] = useState<ZoneData | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const qrRef = useRef<SVGSVGElement>(null);
+
+  // Zone code derived from name — updated live
+  const zoneCode = name.trim().toUpperCase().replace(/\s+/g, "-").slice(0, 16) || "NEW-GEOFENCE";
+  const qrUrl = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://geofence.app";
+    return `${origin}/student?join=${encodeURIComponent(zoneCode)}&shape=${shape}&radius=${radius}`;
+  }, [zoneCode, shape, radius]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -63,6 +72,25 @@ function Zones() {
       setDeleteConfirm(id);
       setTimeout(() => setDeleteConfirm(null), 3000);
     }
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrRef.current) return;
+    const svgEl = qrRef.current;
+    const xml = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([xml], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${zoneCode}-qr.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("QR code downloaded!");
+  };
+
+  const handleCopyCode = () => {
+    void navigator.clipboard.writeText(zoneCode);
+    toast.success(`Code "${zoneCode}" copied!`);
   };
 
   return (
@@ -116,12 +144,53 @@ function Zones() {
               <h3 className="font-display font-semibold text-sm">QR Provisioning</h3>
               <QrCode className="size-4 text-cyan" />
             </div>
+
+            {/* Live QR code */}
             <div className="mt-3 grid place-items-center p-5 rounded-2xl bg-white/5">
-              <div className="size-32 rounded-xl bg-foreground p-2">
-                <div className="size-full rounded-lg" style={{ background: "repeating-conic-gradient(#0a0e1a 0deg 90deg, #fff 90deg 180deg) 0 0 / 12px 12px" }} />
+              <div className="p-3 bg-white rounded-2xl shadow-lg">
+                <QRCodeSVG
+                  ref={qrRef}
+                  value={qrUrl}
+                  size={160}
+                  bgColor="#ffffff"
+                  fgColor="#0a0e1a"
+                  level="M"
+                  marginSize={1}
+                  imageSettings={{
+                    src: "/favicon.ico",
+                    height: 28,
+                    width: 28,
+                    excavate: true,
+                  }}
+                />
               </div>
             </div>
-            <p className="mt-3 text-[11px] text-muted-foreground text-center">Scan to enroll a device into <span className="text-foreground font-medium">{name}</span></p>
+
+            {/* Zone code chip */}
+            <div className="mt-3 flex items-center justify-between gap-2 glass rounded-xl px-3 py-2">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Zone Code</p>
+                <p className="font-mono text-sm font-semibold text-cyan">{zoneCode}</p>
+              </div>
+              <button
+                onClick={handleCopyCode}
+                className="size-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition"
+                title="Copy code"
+              >
+                <Copy className="size-3.5" />
+              </button>
+            </div>
+
+            <p className="mt-3 text-[11px] text-muted-foreground text-center">
+              Scan to enroll into <span className="text-foreground font-medium">{name || "New Geofence"}</span>
+            </p>
+
+            <button
+              onClick={handleDownloadQR}
+              className="mt-3 w-full flex items-center justify-center gap-2 glass rounded-xl py-2.5 text-xs font-medium hover:bg-white/10 transition"
+            >
+              <Download className="size-3.5" /> Download QR
+            </button>
           </div>
         </div>
       </div>

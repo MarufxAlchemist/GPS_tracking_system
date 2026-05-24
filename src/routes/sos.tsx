@@ -24,11 +24,11 @@ interface SosEvent {
 }
 
 const EVENTS: SosEvent[] = [
-  { id: "e1", user: "Maya Verma", userId: "ID 4421", location: "East Gate", coordinates: "12.9716°N, 77.5946°E", time: "just now", date: "Today", status: "active" },
-  { id: "e2", user: "Noah Kim", userId: "ID 3001", location: "Hostel Block C", coordinates: "12.9720°N, 77.5952°E", time: "3 min ago", date: "Today", status: "responding", responder: "Officer Chen" },
-  { id: "e3", user: "Kai Tanaka", userId: "ID 3187", location: "Library Exit", coordinates: "12.9711°N, 77.5941°E", time: "1 hr ago", date: "Today", status: "resolved", responder: "Officer Patel", resolvedIn: "4m 22s" },
-  { id: "e4", user: "Priya Sharma", userId: "ID 8801", location: "Parking Lot B", coordinates: "12.9725°N, 77.5958°E", time: "3 hr ago", date: "Today", status: "resolved", responder: "Officer Lee", resolvedIn: "6m 11s" },
-  { id: "e5", user: "Arjun Mehta", userId: "ID 2290", location: "Field North", coordinates: "12.9709°N, 77.5938°E", time: "Yesterday", date: "Yesterday", status: "resolved", responder: "Officer Chen", resolvedIn: "3m 45s" },
+  { id: "e1", user: "Maruf Nadaf", userId: "ID 4421", location: "East Gate", coordinates: "12.9716°N, 77.5946°E", time: "just now", date: "Today", status: "active" },
+  { id: "e2", user: "Gautam Iyengar", userId: "ID 3001", location: "Hostel Block C", coordinates: "12.9720°N, 77.5952°E", time: "3 min ago", date: "Today", status: "responding", responder: "Officer Chen" },
+  { id: "e3", user: "Anuja Naik", userId: "ID 3187", location: "Library Exit", coordinates: "12.9711°N, 77.5941°E", time: "1 hr ago", date: "Today", status: "resolved", responder: "Officer Patel", resolvedIn: "4m 22s" },
+  { id: "e4", user: "Samidha Ghorpade", userId: "ID 8801", location: "Parking Lot B", coordinates: "12.9725°N, 77.5958°E", time: "3 hr ago", date: "Today", status: "resolved", responder: "Officer Lee", resolvedIn: "6m 11s" },
+  { id: "e5", user: "Harsh Joshi", userId: "ID 2290", location: "Field North", coordinates: "12.9709°N, 77.5938°E", time: "Yesterday", date: "Yesterday", status: "resolved", responder: "Officer Chen", resolvedIn: "3m 45s" },
 ];
 
 const statusCfg = {

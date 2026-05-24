@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, QrCode, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Props {
   open: boolean;
@@ -96,14 +97,27 @@ export function JoinZoneModal({ open, onClose }: Props) {
               </>
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <div className="size-48 rounded-2xl bg-foreground p-3">
-                  <div className="size-full rounded-xl" style={{ background: "repeating-conic-gradient(#0a0e1a 0deg 90deg, #fff 90deg 180deg) 0 0 / 14px 14px" }} />
+                <div className="p-4 bg-white rounded-2xl shadow-lg">
+                  <QRCodeSVG
+                    value={`${typeof window !== "undefined" ? window.location.origin : "https://geofence.app"}/student?join=CAMPUS-A&shape=circle&radius=200`}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#0a0e1a"
+                    level="M"
+                    marginSize={1}
+                    imageSettings={{
+                      src: "/favicon.ico",
+                      height: 24,
+                      width: 24,
+                      excavate: true,
+                    }}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Point your camera at a GeoFence QR code to instantly join a zone.
-                </p>
-                <div className="w-full glass rounded-xl py-3 text-center text-xs text-muted-foreground">
-                  Camera access required
+                <div className="text-center space-y-1">
+                  <p className="text-xs font-mono font-semibold text-cyan">CAMPUS-A</p>
+                  <p className="text-xs text-muted-foreground">
+                    Scan with your phone camera to join this zone.
+                  </p>
                 </div>
               </div>
             )}
