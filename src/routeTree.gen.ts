@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZonesRouteImport } from './routes/zones'
 import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as StudentRouteImport } from './routes/student'
+import { Route as SosRouteImport } from './routes/sos'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,6 +35,11 @@ const TrackingRoute = TrackingRouteImport.update({
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
   path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SosRoute = SosRouteImport.update({
+  id: '/sos',
+  path: '/sos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -55,6 +62,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttendanceRoute = AttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -75,10 +87,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/attendance': typeof AttendanceRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sos': typeof SosRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -87,10 +101,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/attendance': typeof AttendanceRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sos': typeof SosRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -100,10 +116,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
   '/analytics': typeof AnalyticsRoute
+  '/attendance': typeof AttendanceRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sos': typeof SosRoute
   '/student': typeof StudentRoute
   '/tracking': typeof TrackingRoute
   '/zones': typeof ZonesRoute
@@ -114,10 +132,12 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analytics'
+    | '/attendance'
     | '/dashboard'
     | '/login'
     | '/signup'
     | '/sitemap.xml'
+    | '/sos'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -126,10 +146,12 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analytics'
+    | '/attendance'
     | '/dashboard'
     | '/login'
     | '/signup'
     | '/sitemap.xml'
+    | '/sos'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -138,10 +160,12 @@ export interface FileRouteTypes {
     | '/'
     | '/alerts'
     | '/analytics'
+    | '/attendance'
     | '/dashboard'
     | '/login'
     | '/signup'
     | '/sitemap.xml'
+    | '/sos'
     | '/student'
     | '/tracking'
     | '/zones'
@@ -151,10 +175,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  AttendanceRoute: typeof AttendanceRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SosRoute: typeof SosRoute
   StudentRoute: typeof StudentRoute
   TrackingRoute: typeof TrackingRoute
   ZonesRoute: typeof ZonesRoute
@@ -181,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sos': {
+      id: '/sos'
+      path: '/sos'
+      fullPath: '/sos'
+      preLoaderRoute: typeof SosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -211,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance': {
+      id: '/attendance'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AttendanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -239,10 +279,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
   AnalyticsRoute: AnalyticsRoute,
+  AttendanceRoute: AttendanceRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SosRoute: SosRoute,
   StudentRoute: StudentRoute,
   TrackingRoute: TrackingRoute,
   ZonesRoute: ZonesRoute,
