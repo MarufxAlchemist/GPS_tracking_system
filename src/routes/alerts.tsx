@@ -47,4 +47,4 @@ function Stat({ icon, label, value, color }: { icon: React.ReactNode; label: str
     </div>
   );
 }
-// try again
+
