@@ -14,9 +14,9 @@ export default defineConfig({
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
 
   ssr: {
-    // Prevent leaflet and react-leaflet from being bundled in SSR —
-    // they require `window` and must only run in the browser.
-    external: ["leaflet", "react-leaflet"],
+    // Bundle ALL dependencies into the Vercel Serverless Function
+    // so it doesn't crash from missing node_modules at runtime.
+    noExternal: true,
   },
 
   plugins: [
