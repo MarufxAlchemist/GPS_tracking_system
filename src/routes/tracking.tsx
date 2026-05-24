@@ -6,6 +6,8 @@ import { useLocationTracker } from "@/hooks/use-location-tracker";
 import { ClientOnly } from "@/components/client-only";
 import { type GeofenceZone } from "@/lib/geofence";
 import { Search, Layers, Crosshair, Flame, MapPin, Activity, Navigation, AlertCircle, Users } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // Leaflet map lazy-loaded so it never runs during SSR
 const LiveTrackingMap = lazy(() =>
@@ -27,19 +29,16 @@ export const Route = createFileRoute("/tracking")({
   component: Tracking,
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function getDeviceId(): string {
   if (typeof window === "undefined") return "00000000-0000-0000-0000-000000000000";
   let id = localStorage.getItem("device_id");
   if (!id) {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
       id = crypto.randomUUID();
     } else {
-      id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0,
+          v = c == "x" ? r : (r & 0x3) | 0x8;
         return v.toString(16);
       });
     }
@@ -48,45 +47,37 @@ function getDeviceId(): string {
   return id;
 }
 
-/** Shorten a UUID to first 8 chars for display */
 function shortId(uid: string) {
   return uid.slice(0, 8).toUpperCase();
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+type StatusFilter = "all" | "safe" | "warning" | "alert";
 
 function Tracking() {
   const [geoEnabled, setGeoEnabled] = useState(true);
   const [zones, setZones] = useState<GeofenceZone[]>([]);
   const [deviceId] = useState<string>(() => getDeviceId());
-  // All live users from the map (updated via onLocationsChange callback)
   const [liveLocations, setLiveLocations] = useState<Map<string, LocationRow>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [layerActive, setLayerActive] = useState(false);
+  const [heatmapActive, setHeatmapActive] = useState(false);
 
   const { trackerStatus, start, stop } = useLocationTracker({
     userId: deviceId,
     intervalMs: 5000,
   });
 
-  // Start / stop tracking based on geoEnabled toggle
   useEffect(() => {
     if (geoEnabled) {
-      console.log("[Tracking] Starting location tracker for device:", deviceId);
       start();
     } else {
-      console.log("[Tracking] Stopping location tracker.");
       stop();
     }
-  }, [geoEnabled, start, stop, deviceId]);
+  }, [geoEnabled, start, stop]);
 
-  // Auto-create a geofence zone on first fix
   useEffect(() => {
     if (trackerStatus.status === "tracking" && zones.length === 0) {
-      console.log("[Tracking] Creating initial geofence zone at:", {
-        lat: trackerStatus.latitude,
-        lon: trackerStatus.longitude,
-      });
       setZones([
         {
           id: "home-base",
@@ -99,20 +90,63 @@ function Tracking() {
     }
   }, [trackerStatus, zones]);
 
-  // Callback from LiveTrackingMap whenever its internal location map changes
   const handleLocationsChange = useCallback((locs: Map<string, LocationRow>) => {
-    console.log(`[Tracking] Location map updated: ${locs.size} user(s)`);
     setLiveLocations(new Map(locs));
   }, []);
 
-  // Derive the live user list, putting "you" first
-  const liveUsers = Array.from(liveLocations.values()).sort((a, b) => {
+  const allUsers = Array.from(liveLocations.values()).sort((a, b) => {
     if (a.user_id === deviceId) return -1;
     if (b.user_id === deviceId) return 1;
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
 
+  // Filter by search
+  const filteredUsers = allUsers.filter((loc) => {
+    const idMatch = searchQuery === "" || loc.user_id.toUpperCase().includes(searchQuery.toUpperCase());
+    const isYou = loc.user_id === deviceId;
+    const timeSince = Math.round((Date.now() - new Date(loc.updated_at).getTime()) / 1000);
+    const isRecent = timeSince < 15;
+
+    let statusMatch = true;
+    if (statusFilter === "safe") statusMatch = isRecent;
+    else if (statusFilter === "warning") statusMatch = !isRecent;
+    else if (statusFilter === "alert") statusMatch = isYou && !isRecent;
+
+    return idMatch && statusMatch;
+  });
+
   const trackedCount = liveLocations.size;
+
+  const handleLayerToggle = () => {
+    setLayerActive((v) => !v);
+    toast.info(layerActive ? "Satellite layer off" : "Satellite layer on");
+  };
+
+  const handleRecenter = () => {
+    if (trackerStatus.status === "tracking") {
+      toast.success(`Recentered on ${trackerStatus.latitude.toFixed(4)}°, ${trackerStatus.longitude.toFixed(4)}°`);
+    } else {
+      toast.error("Enable location sharing to recenter map");
+    }
+  };
+
+  const handleHeatmap = () => {
+    setHeatmapActive((v) => !v);
+    toast.info(heatmapActive ? "Heatmap overlay off" : "Heatmap overlay on");
+  };
+
+  const mapControls = [
+    { Icon: Layers, label: "Layers", active: layerActive, action: handleLayerToggle },
+    { Icon: Crosshair, label: "Recenter", active: false, action: handleRecenter },
+    { Icon: Flame, label: "Heatmap", active: heatmapActive, action: handleHeatmap },
+  ];
+
+  const filterPills: { key: StatusFilter; label: string; color: string }[] = [
+    { key: "all", label: "All", color: "cyan" },
+    { key: "safe", label: "Safe", color: "success" },
+    { key: "warning", label: "Warning", color: "warning" },
+    { key: "alert", label: "Alert", color: "danger" },
+  ];
 
   return (
     <DashboardShell
@@ -134,9 +168,17 @@ function Tracking() {
           </ClientOnly>
           {/* Floating map controls */}
           <div className="absolute top-4 right-4 glass rounded-2xl p-2 flex flex-col gap-1">
-            {[Layers, Crosshair, Flame].map((I, i) => (
-              <button key={i} className="size-10 rounded-xl hover:bg-white/10 flex items-center justify-center transition group">
-                <I className="size-4 text-muted-foreground group-hover:text-cyan transition" />
+            {mapControls.map(({ Icon, label, active, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                title={label}
+                className={cn(
+                  "size-10 rounded-xl flex items-center justify-center transition group",
+                  active ? "bg-cyan/20" : "hover:bg-white/10"
+                )}
+              >
+                <Icon className={cn("size-4 transition", active ? "text-cyan" : "text-muted-foreground group-hover:text-cyan")} />
               </button>
             ))}
           </div>
@@ -232,26 +274,25 @@ function Tracking() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
-                placeholder="Search user…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search user ID…"
                 className="w-full pl-9 pr-3 h-10 rounded-xl bg-white/5 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-cyan/40"
               />
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {[
-                { l: "All", c: "cyan" },
-                { l: "Safe", c: "success" },
-                { l: "Warning", c: "warning" },
-                { l: "Alert", c: "danger" },
-              ].map((f, i) => (
+              {filterPills.map((f) => (
                 <button
-                  key={f.l}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-                    i === 0
+                  key={f.key}
+                  onClick={() => setStatusFilter(f.key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium border transition",
+                    statusFilter === f.key
                       ? "gradient-primary text-primary-foreground border-transparent"
                       : "border-border hover:bg-white/5"
-                  }`}
+                  )}
                 >
-                  {f.l}
+                  {f.label}
                 </button>
               ))}
             </div>
@@ -265,63 +306,53 @@ function Tracking() {
                 <h3 className="font-display font-semibold text-sm">Active Users</h3>
               </div>
               <span className="text-[10px] font-mono text-muted-foreground">
-                {trackedCount} tracked
+                {filteredUsers.length}/{trackedCount} shown
               </span>
             </div>
 
-            {liveUsers.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <div className="py-6 flex flex-col items-center gap-2 text-center">
                 <MapPin className="size-8 text-muted-foreground opacity-40" />
-                <p className="text-xs text-muted-foreground">No users tracked yet.</p>
-                <p className="text-[10px] text-muted-foreground/60">
-                  Open the site on another device to see it appear here.
+                <p className="text-xs text-muted-foreground">
+                  {allUsers.length === 0 ? "No users tracked yet." : "No users match filter."}
                 </p>
+                {allUsers.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Open the site on another device to see it appear here.
+                  </p>
+                )}
               </div>
             ) : (
               <ul className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-hide">
-                {liveUsers.map((loc) => {
+                {filteredUsers.map((loc) => {
                   const isYou = loc.user_id === deviceId;
                   const initials = isYou ? "YOU" : shortId(loc.user_id).slice(0, 3);
-                  const timeSince = Math.round(
-                    (Date.now() - new Date(loc.updated_at).getTime()) / 1000,
-                  );
+                  const timeSince = Math.round((Date.now() - new Date(loc.updated_at).getTime()) / 1000);
                   const isRecent = timeSince < 15;
 
                   return (
                     <li
                       key={loc.user_id}
-                      className={`flex items-center gap-3 p-2 rounded-xl transition ${
-                        isYou
-                          ? "bg-cyan/5 border border-cyan/20"
-                          : "hover:bg-white/5 cursor-pointer"
-                      }`}
+                      className={cn(
+                        "flex items-center gap-3 p-2 rounded-xl transition",
+                        isYou ? "bg-cyan/5 border border-cyan/20" : "hover:bg-white/5 cursor-pointer"
+                      )}
                     >
                       <div className="relative shrink-0">
-                        <div
-                          className={`size-9 rounded-xl flex items-center justify-center text-xs font-bold ${
-                            isYou ? "gradient-primary" : "gradient-violet"
-                          }`}
-                        >
+                        <div className={cn("size-9 rounded-xl flex items-center justify-center text-xs font-bold", isYou ? "gradient-primary" : "gradient-violet")}>
                           {initials}
                         </div>
                         <span
                           className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-background"
-                          style={{
-                            background: isRecent ? "var(--success)" : "var(--warning)",
-                            boxShadow: `0 0 8px ${isRecent ? "var(--success)" : "var(--warning)"}`,
-                          }}
+                          style={{ background: isRecent ? "var(--success)" : "var(--warning)", boxShadow: `0 0 8px ${isRecent ? "var(--success)" : "var(--warning)"}` }}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div
-                          className="text-sm font-medium truncate"
-                          style={{ color: isYou ? "var(--cyan)" : undefined }}
-                        >
+                        <div className="text-sm font-medium truncate" style={{ color: isYou ? "var(--cyan)" : undefined }}>
                           {isYou ? "You (Live)" : `User ${shortId(loc.user_id)}`}
                         </div>
                         <div className="text-[10px] text-muted-foreground font-mono">
-                          {loc.latitude.toFixed(3)}°, {loc.longitude.toFixed(3)}°
-                          {" · "}
+                          {loc.latitude.toFixed(3)}°, {loc.longitude.toFixed(3)}°{" · "}
                           {timeSince < 60 ? `${timeSince}s ago` : `${Math.round(timeSince / 60)}m ago`}
                         </div>
                       </div>

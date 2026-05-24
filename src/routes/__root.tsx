@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 
@@ -97,6 +98,17 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "oklch(0.18 0.03 265)",
+            border: "1px solid oklch(1 0 0 / 0.12)",
+            color: "oklch(0.96 0.01 250)",
+            borderRadius: "16px",
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }

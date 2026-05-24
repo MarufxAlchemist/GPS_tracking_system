@@ -1,8 +1,11 @@
-import React, { useState, ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import React, { useState, useRef, ReactNode } from "react";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { LayoutDashboard, MapPin, Hexagon, ClipboardCheck, Bell, BarChart3, ShieldAlert, Settings, Radar, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Search, Bell as BellIcon, ChevronDown } from "lucide-react";
+import { NotificationsPanel } from "@/components/notifications-panel";
+import { UserMenu } from "@/components/user-menu";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -15,10 +18,42 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] satisfies { to: string; label: string; icon: React.ElementType }[];
 
+// Unread notification count (would normally come from context/store)
+const UNREAD_COUNT = 2;
 
 export function DashboardShell({ children, title, subtitle }: { children: ReactNode; title: string; subtitle?: string }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const navigate = useNavigate();
+  const userBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchValue.trim()) {
+      const q = searchValue.toLowerCase();
+      if (q.includes("track") || q.includes("map") || q.includes("live")) {
+        void navigate({ to: "/tracking" });
+      } else if (q.includes("zone")) {
+        void navigate({ to: "/zones" });
+      } else if (q.includes("alert")) {
+        void navigate({ to: "/alerts" });
+      } else if (q.includes("analyt")) {
+        void navigate({ to: "/analytics" });
+      } else if (q.includes("attend")) {
+        void navigate({ to: "/attendance" });
+      } else if (q.includes("sos")) {
+        void navigate({ to: "/sos" });
+      } else if (q.includes("setting")) {
+        void navigate({ to: "/settings" });
+      } else {
+        void navigate({ to: "/dashboard" });
+      }
+      setSearchValue("");
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -80,7 +115,10 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
                 <div className="absolute -top-8 -right-8 size-24 rounded-full bg-violet/30 blur-2xl" />
                 <p className="text-xs font-display font-semibold">Upgrade to Pro</p>
                 <p className="text-[11px] text-muted-foreground mt-1">Unlimited zones & AI insights.</p>
-                <button className="mt-3 w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2">
+                <button
+                  onClick={() => setUpgradeOpen(true)}
+                  className="mt-3 w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2 hover:scale-[1.02] transition"
+                >
                   Upgrade
                 </button>
               </div>
@@ -96,7 +134,10 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
               <div className="flex-1 max-w-md relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <input
-                  placeholder="Search students, zones, alerts…"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={handleSearchKey}
+                  placeholder="Search students, zones, alerts… (press Enter)"
                   className="w-full pl-10 pr-4 h-10 rounded-xl bg-white/5 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-cyan/40 focus:border-cyan/40 transition"
                 />
               </div>
@@ -107,18 +148,36 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
                 </span>
                 ALL SYSTEMS LIVE
               </div>
-              <button className="relative size-10 rounded-xl glass flex items-center justify-center hover:bg-white/10 transition">
+
+              {/* Bell */}
+              <button
+                id="notifications-btn"
+                onClick={() => setNotifOpen(true)}
+                className="relative size-10 rounded-xl glass flex items-center justify-center hover:bg-white/10 transition"
+              >
                 <BellIcon className="size-4" />
-                <span className="absolute top-2 right-2 size-2 rounded-full bg-danger ring-2 ring-background" />
+                {UNREAD_COUNT > 0 && (
+                  <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger ring-2 ring-background" />
+                )}
               </button>
-              <button className="flex items-center gap-2 glass rounded-xl pl-1 pr-3 py-1 hover:bg-white/10 transition">
-                <div className="size-8 rounded-lg gradient-violet flex items-center justify-center text-xs font-bold">AK</div>
-                <div className="text-left hidden sm:block">
-                  <div className="text-xs font-semibold leading-tight">Ananya K.</div>
-                  <div className="text-[10px] text-muted-foreground">Admin</div>
-                </div>
-                <ChevronDown className="size-3 text-muted-foreground" />
-              </button>
+
+              {/* User avatar */}
+              <div className="relative">
+                <button
+                  id="user-menu-btn"
+                  ref={userBtnRef}
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-2 glass rounded-xl pl-1 pr-3 py-1 hover:bg-white/10 transition"
+                >
+                  <div className="size-8 rounded-lg gradient-violet flex items-center justify-center text-xs font-bold">AK</div>
+                  <div className="text-left hidden sm:block">
+                    <div className="text-xs font-semibold leading-tight">Ananya K.</div>
+                    <div className="text-[10px] text-muted-foreground">Admin</div>
+                  </div>
+                  <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", userMenuOpen && "rotate-180")} />
+                </button>
+                <UserMenu open={userMenuOpen} onClose={() => setUserMenuOpen(false)} anchorRef={userBtnRef} />
+              </div>
             </div>
             <div className="px-4 md:px-8 pb-4 flex items-end justify-between gap-4 flex-wrap">
               <div>
@@ -134,6 +193,10 @@ export function DashboardShell({ children, title, subtitle }: { children: ReactN
           <main className="px-4 md:px-8 py-6 flex-1">{children}</main>
         </div>
       </div>
+
+      {/* Overlays */}
+      <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </div>
   );
 }

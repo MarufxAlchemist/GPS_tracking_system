@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LiveMap } from "@/components/live-map";
-import { Radar, Mail, Lock, ChevronRight, GraduationCap, UserRound } from "lucide-react";
+import { Radar, Mail, Lock, ChevronRight, GraduationCap, UserRound, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — GeoFence" }, { name: "description", content: "Access your GeoFence command center." }] }),
@@ -13,6 +14,38 @@ function AuthPage() { return <Auth mode="login" />; }
 
 export function Auth({ mode }: { mode: "login" | "signup" }) {
   const [role, setRole] = useState<"teacher" | "student">("teacher");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const validate = () => {
+    const e: typeof errors = {};
+    if (!email.trim()) e.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email";
+    if (!password) e.password = "Password is required";
+    else if (password.length < 6) e.password = "Password must be at least 6 characters";
+    return e;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
+    setLoading(true);
+    // Simulate auth
+    await new Promise((r) => setTimeout(r, 1200));
+    setLoading(false);
+    toast.success(`Welcome back! Signed in as ${email}`);
+    void navigate({ to: "/dashboard" });
+  };
+
+  const handleGoogle = () => {
+    toast.info("Google OAuth coming soon — use email/password for now.");
+  };
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left visual */}
@@ -67,26 +100,60 @@ export function Auth({ mode }: { mode: "login" | "signup" }) {
               ))}
             </div>
 
-            <form className="mt-6 space-y-4">
-              <InputField icon={Mail} label="Email" type="email" placeholder="you@campus.edu" />
-              <InputField icon={Lock} label="Password" type="password" placeholder="••••••••" />
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
+              <div>
+                <InputField
+                  icon={Mail}
+                  label="Email"
+                  type="email"
+                  placeholder="you@campus.edu"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
+                  error={errors.email}
+                />
+              </div>
+              <div>
+                <InputField
+                  icon={Lock}
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }}
+                  error={errors.password}
+                />
+              </div>
               {mode === "login" && (
                 <div className="flex items-center justify-between text-xs">
                   <label className="inline-flex items-center gap-2 text-muted-foreground">
                     <input type="checkbox" className="rounded border-border accent-cyan" /> Remember me
                   </label>
-                  <a href="#" className="text-cyan hover:underline">Forgot password?</a>
+                  <button type="button" onClick={() => toast.info("Check your email for a reset link.")} className="text-cyan hover:underline">
+                    Forgot password?
+                  </button>
                 </div>
               )}
-              <Link to="/dashboard" className="group flex items-center justify-center gap-1.5 w-full rounded-2xl gradient-primary text-primary-foreground font-semibold py-3 glow-cyan hover:scale-[1.02] transition">
-                Continue <ChevronRight className="size-4 group-hover:translate-x-0.5 transition" />
-              </Link>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group flex items-center justify-center gap-1.5 w-full rounded-2xl gradient-primary text-primary-foreground font-semibold py-3 glow-cyan hover:scale-[1.02] transition disabled:opacity-70 disabled:scale-100"
+              >
+                {loading ? (
+                  <span className="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                ) : null}
+                {loading ? "Signing in…" : "Continue"}
+                {!loading && <ChevronRight className="size-4 group-hover:translate-x-0.5 transition" />}
+              </button>
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <div className="flex-1 h-px bg-border" /> OR <div className="flex-1 h-px bg-border" />
               </div>
 
-              <button type="button" className="w-full glass rounded-2xl py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition">
+              <button
+                type="button"
+                onClick={handleGoogle}
+                className="w-full glass rounded-2xl py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition"
+              >
                 <GoogleIcon /> Continue with Google
               </button>
             </form>
@@ -105,23 +172,35 @@ export function Auth({ mode }: { mode: "login" | "signup" }) {
   );
 }
 
-function InputField({ icon: Icon, label, ...props }: { icon: any; label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+function InputField({
+  icon: Icon, label, error, ...props
+}: { icon: React.ElementType; label: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="block">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="mt-1.5 relative group">
-        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-cyan transition" />
+        <Icon className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 size-4 transition", error ? "text-danger" : "text-muted-foreground group-focus-within:text-cyan")} />
         <input
           {...props}
-          className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white/5 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-cyan/40 focus:border-cyan/50 transition placeholder:text-muted-foreground/60"
+          className={cn(
+            "w-full h-12 pl-10 pr-4 rounded-2xl bg-white/5 border text-sm focus:outline-none focus:ring-2 transition placeholder:text-muted-foreground/60",
+            error
+              ? "border-danger/50 focus:ring-danger/30 focus:border-danger/60"
+              : "border-border focus:ring-cyan/40 focus:border-cyan/50"
+          )}
         />
       </div>
+      {error && (
+        <p className="mt-1 text-xs text-danger flex items-center gap-1">
+          <AlertCircle className="size-3" />{error}
+        </p>
+      )}
     </label>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg className="size-4" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.4-1.6 4-5.5 4-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 3.3 14.6 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12s4.3 9.6 9.6 9.6c5.5 0 9.2-3.9 9.2-9.4 0-.6-.1-1.1-.2-1.6H12z"/></svg>
+    <svg className="size-4" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.4-1.6 4-5.5 4-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 3.3 14.6 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12s4.3 9.6 9.6 9.6c5.5 0 9.2-3.9 9.2-9.4 0-.6-.1-1.1-.2-1.6H12z" /></svg>
   );
 }
