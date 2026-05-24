@@ -42,8 +42,10 @@ interface LiveTrackingMapProps {
   zones?: GeofenceZone[];
   /** Extra CSS class applied to the wrapper div */
   className?: string;
-  /** Called whenever the tracked locations map changes */
-  onLocationsChange?: (locations: Map<string, LocationRow>) => void;
+  /** Map of active tracked user locations */
+  locations: Map<string, LocationRow>;
+  /** Current realtime connection status */
+  connectionStatus: "connecting" | "connected" | "error";
 }
 
 // ---------------------------------------------------------------------------
@@ -167,10 +169,9 @@ export function LiveTrackingMap({
   highlightUserId,
   zones = [],
   className = "",
-  onLocationsChange,
+  locations,
+  connectionStatus,
 }: LiveTrackingMapProps) {
-  const [locations, setLocations] = useState<Map<string, LocationRow>>(new Map());
-  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "error">("connecting");
 
   // Create icons once per mount (client-only, safe here since this module is SSR-external)
   const defaultIcon = useRef<L.DivIcon | null>(null);
@@ -178,117 +179,7 @@ export function LiveTrackingMap({
   if (!defaultIcon.current) defaultIcon.current = createPulsingIcon("oklch(0.82 0.16 200)");
   if (!highlightIcon.current) highlightIcon.current = createPulsingIcon("oklch(0.78 0.17 65)", true);
 
-  // -----------------------------------------------------------------------
-  // 1. Fetch initial data from live_locations
-  // -----------------------------------------------------------------------
-  useEffect(() => {
-    async function fetchInitial() {
-      console.log("[LiveTrackingMap] Fetching initial locations from live_locations…");
 
-      const { data, error } = await supabase
-        .from("live_locations")
-        .select("user_id, latitude, longitude, updated_at");
-
-      if (error) {
-        console.error("[LiveTrackingMap] Initial fetch failed:", error.message);
-        return;
-      }
-
-      console.log(`[LiveTrackingMap] Initial fetch returned ${data?.length ?? 0} row(s):`, data);
-
-      if (data && data.length > 0) {
-        setLocations((prev) => {
-          const next = new Map(prev);
-          for (const row of data) {
-            if (
-              row &&
-              typeof row.latitude === "number" &&
-              typeof row.longitude === "number" &&
-              !isNaN(row.latitude) &&
-              !isNaN(row.longitude)
-            ) {
-              next.set(row.user_id, row as LocationRow);
-            }
-          }
-          console.log(`[LiveTrackingMap] Location map now has ${next.size} user(s)`);
-          return next;
-        });
-      }
-    }
-
-    void fetchInitial();
-  }, []);
-
-  // -----------------------------------------------------------------------
-  // 2. Supabase Realtime subscription for INSERT and UPDATE
-  // -----------------------------------------------------------------------
-  useEffect(() => {
-    const uniqueChannelName = `live_locations_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-    console.log(`[LiveTrackingMap] Subscribing to realtime on channel "${uniqueChannelName}"…`);
-
-    const handleRow = (row: LocationRow, event: "INSERT" | "UPDATE") => {
-      if (
-        !row ||
-        typeof row.latitude !== "number" ||
-        typeof row.longitude !== "number" ||
-        isNaN(row.latitude) ||
-        isNaN(row.longitude)
-      ) {
-        console.warn("[LiveTrackingMap] Ignoring row with invalid coords:", row);
-        return;
-      }
-
-      console.log(`[LiveTrackingMap] Realtime ${event} received for user ${row.user_id}:`, {
-        lat: row.latitude,
-        lon: row.longitude,
-        at: row.updated_at,
-      });
-
-      setLocations((prev) => {
-        const next = new Map(prev);
-        next.set(row.user_id, row);
-        console.log(`[LiveTrackingMap] Location map now has ${next.size} user(s)`);
-        return next;
-      });
-    };
-
-    const channel = supabase
-      .channel(uniqueChannelName)
-      .on<LocationRow>(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "live_locations" },
-        (payload) => handleRow(payload.new, "INSERT"),
-      )
-      .on<LocationRow>(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "live_locations" },
-        (payload) => handleRow(payload.new, "UPDATE"),
-      )
-      .subscribe((status) => {
-        console.log("[LiveTrackingMap] Realtime subscription status:", status);
-        if (status === "SUBSCRIBED") {
-          setConnectionStatus("connected");
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          setConnectionStatus("error");
-          console.error("[LiveTrackingMap] Realtime subscription failed with status:", status);
-        }
-      });
-
-    return () => {
-      console.log(`[LiveTrackingMap] Removing realtime channel "${uniqueChannelName}"`);
-      void supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // -----------------------------------------------------------------------
-  // Notify parent whenever locations map changes
-  // -----------------------------------------------------------------------
-  const onLocationsChangeRef = useRef(onLocationsChange);
-  useEffect(() => { onLocationsChangeRef.current = onLocationsChange; }, [onLocationsChange]);
-
-  useEffect(() => {
-    onLocationsChangeRef.current?.(locations);
-  }, [locations]);
 
   // -----------------------------------------------------------------------
   // Derived data & Geofence Monitor

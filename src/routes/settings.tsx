@@ -4,6 +4,7 @@ import { User, Bell, Shield, Users, Hexagon, Sliders, Save, Moon, Globe, Key, Tr
 import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { InviteMemberModal } from "@/components/invite-member-modal";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — GeoFence" }] }),
@@ -43,7 +44,8 @@ function Toggle({ label, sub, checked, onChange }: { label: string; sub?: string
 
 function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [name, setName] = useState("Maruf Nadaf");
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("maruf@pvpit.edu.in");
   const [phone, setPhone] = useState("+91 98765 43210");
   const [notifs, setNotifs] = useState({
@@ -202,7 +204,7 @@ function Settings() {
             <>
               <div className="flex items-center justify-between">
                 <h2 className="font-display font-semibold text-lg">Team Members</h2>
-                <button onClick={() => toast.info("Invite link copied to clipboard!")} className="gradient-primary text-primary-foreground text-xs font-semibold px-4 py-2 rounded-xl glow-cyan hover:scale-[1.02] transition">
+                <button onClick={() => setInviteModalOpen(true)} className="gradient-primary text-primary-foreground text-xs font-semibold px-4 py-2 rounded-xl glow-cyan hover:scale-[1.02] transition">
                   Invite Member
                 </button>
               </div>
@@ -277,6 +279,7 @@ function Settings() {
           )}
         </div>
       </div>
+      <InviteMemberModal open={inviteModalOpen} onClose={() => setInviteModalOpen(false)} />
     </DashboardShell>
   );
 }

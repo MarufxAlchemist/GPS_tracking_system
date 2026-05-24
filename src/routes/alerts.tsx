@@ -22,16 +22,7 @@ interface AlertItem {
   status: "active" | "acknowledged" | "resolved";
 }
 
-const INITIAL_ALERTS: AlertItem[] = [
-  { id: "a1", severity: "emergency", title: "SOS Triggered", user: "Maruf Nadaf · ID 4421", location: "East Gate", time: "just now", description: "Distress signal received. Responders dispatched, ETA 2 min.", status: "active" },
-  { id: "a2", severity: "emergency", title: "Device went dark", user: "Gautam Iyengar · ID 3001", location: "Hostel Block C", time: "3 min ago", description: "No telemetry received for 4 minutes. Auto-escalated.", status: "active" },
-  { id: "a3", severity: "warning", title: "Left Geofence", user: "Anuja Naik · ID 3187", location: "Campus A perimeter", time: "6 min ago", status: "active" },
-  { id: "a4", severity: "warning", title: "Idle outside zone", user: "Samidha Ghorpade · ID 2204", location: "Library annex", time: "11 min ago", status: "active" },
-  { id: "a5", severity: "warning", title: "Battery critical", user: "Harsh Joshi · ID 5511", location: "Field", time: "22 min ago", status: "active" },
-  { id: "a6", severity: "safe", title: "Returned to zone", user: "Tushar Dhanawade · ID 1109", location: "Field", time: "31 min ago", status: "resolved" },
-  { id: "a7", severity: "safe", title: "Attendance marked", user: "Sameer Barathe · ID 0982", location: "Block C", time: "42 min ago", status: "resolved" },
-  { id: "a8", severity: "safe", title: "Zone entered", user: "Jerry Dsouza · ID 0021", location: "Library", time: "58 min ago", status: "resolved" },
-];
+const INITIAL_ALERTS: AlertItem[] = [];
 
 type FilterTab = "all" | "emergency" | "warning" | "resolved";
 

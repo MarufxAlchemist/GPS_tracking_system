@@ -7,9 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   server: {
-    allowedHosts: [
-      'backing-unwired-vehicular.ngrok-free.dev'
-    ]
+    allowedHosts: true
   },
 
   // Expose both VITE_ (standard) and NEXT_PUBLIC_ (from shared .env.local) to client code
@@ -25,7 +23,10 @@ export default defineConfig({
     tsconfigPaths(),
     tailwindcss(),
     tanstackStart({
-      server: { entry: "server" },
+      server: { 
+        entry: "server",
+        preset: process.env.VERCEL ? "vercel" : "node",
+      },
     }),
     viteReact(),
     // cloudflare(),

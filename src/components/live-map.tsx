@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import type { GeoState } from "@/hooks/use-geolocation";
+import { useLiveLocations } from "@/hooks/use-live-locations";
 
-type Marker = { id: string; x: number; y: number; vx: number; vy: number; status: "safe" | "warn" | "alert"; name: string };
+type Marker = { id: string; x: number; y: number; status: "safe" | "warn" | "alert"; name: string };
 
-const NAMES = ["Maruf", "Gautam", "Anuja", "Samidha", "Harsh", "Tushar", "Sameer", "Jerry", "Tejas", "Maruf N.", "Gautam I.", "Anuja N."];
-
-function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
 
 /**
  * Map real-world lat/lon to SVG % coordinates [0..100].
@@ -32,33 +30,19 @@ interface LiveMapProps {
 }
 
 export function LiveMap({ height = 520, compact = false, geoState }: LiveMapProps) {
-  const [markers, setMarkers] = useState<Marker[]>(() =>
-    Array.from({ length: compact ? 4 : 9 }, (_, i) => ({
-      id: String(i),
-      x: rand(15, 85),
-      y: rand(20, 80),
-      vx: rand(-0.15, 0.15),
-      vy: rand(-0.15, 0.15),
-      status: i === 2 ? "alert" : i % 4 === 0 ? "warn" : "safe",
-      name: NAMES[i % NAMES.length],
-    })),
-  );
+  const { locations } = useLiveLocations();
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setMarkers((prev) =>
-        prev.map((m) => {
-          let nx = m.x + m.vx;
-          let ny = m.y + m.vy;
-          let vx = m.vx, vy = m.vy;
-          if (nx < 8 || nx > 92) { vx = -vx; nx = m.x + vx; }
-          if (ny < 12 || ny > 88) { vy = -vy; ny = m.y + vy; }
-          return { ...m, x: nx, y: ny, vx, vy };
-        }),
-      );
-    }, 80);
-    return () => clearInterval(t);
-  }, []);
+  const markers: Marker[] = Array.from(locations.values()).map(loc => {
+    const pos = latLonToSvg(loc.latitude, loc.longitude);
+    const timeSince = Math.round((Date.now() - new Date(loc.updated_at).getTime()) / 1000);
+    return {
+      id: loc.user_id,
+      x: pos.x,
+      y: pos.y,
+      status: timeSince < 15 ? "safe" : timeSince < 60 ? "warn" : "alert",
+      name: loc.username || `User ${loc.user_id.slice(0, 4)}`
+    };
+  });
 
   // Geofence zones
   const zones = [
@@ -103,22 +87,7 @@ export function LiveMap({ height = 520, compact = false, geoState }: LiveMapProp
         {[20, 40, 60, 80].map((x) => (
           <path key={x} d={`M ${x} 8 Q ${x - 6} 50, ${x} 92`} stroke="oklch(1 0 0 / 0.06)" fill="none" />
         ))}
-        {/* Animated route lines between markers */}
-        {markers.slice(0, 4).map((m, i) => {
-          const n = markers[(i + 1) % 4];
-          return (
-            <path
-              key={m.id}
-              d={`M ${m.x} ${m.y} Q ${(m.x + n.x) / 2} ${(m.y + n.y) / 2 - 8}, ${n.x} ${n.y}`}
-              stroke="url(#route)"
-              strokeWidth="0.25"
-              fill="none"
-              strokeDasharray="2 3"
-              className="dash-flow"
-              opacity="0.6"
-            />
-          );
-        })}
+        {/* Animated route lines between markers (disabled for real data as it requires path tracking) */}
         {/* Zones */}
         {zones.map((z) => (
           <g key={z.label}>

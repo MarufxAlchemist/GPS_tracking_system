@@ -5,6 +5,8 @@ import { StatCard } from "@/components/stat-card";
 import { AlertCard } from "@/components/alert-card";
 import { Users, MapPin, Hexagon, ClipboardCheck, ShieldAlert, Activity, ArrowRight, Sparkles, Layers } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
+import { useLiveLocations } from "@/hooks/use-live-locations";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Command Center — GeoFence" }, { name: "description", content: "Realtime operations dashboard." }] }),
@@ -15,11 +17,14 @@ const attendance = Array.from({ length: 14 }, (_, i) => ({ d: `D${i+1}`, present
 const movement = Array.from({ length: 24 }, (_, i) => ({ h: `${i}h`, value: Math.round(20 + Math.abs(Math.sin(i/3)*40) + Math.random()*8) }));
 
 function Dashboard() {
+  const { locations } = useLiveLocations();
+  const activeCount = locations.size;
+
   return (
     <DashboardShell title="Command Center" subtitle="Realtime overview · Northgate Campus">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard label="Active Students" value="1,284" delta={4.2} sub="of 1,420 enrolled" icon={<Users className="size-4" />} accent="cyan" />
+        <StatCard label="Active Students" value={activeCount.toString()} delta={4.2} sub="currently online" icon={<Users className="size-4" />} accent="cyan" />
         <StatCard label="Outside Zone" value="37" delta={-12} sub="6 require attention" icon={<MapPin className="size-4" />} accent="warning" />
         <StatCard label="Active Zones" value="14" delta={2} sub="3 created this week" icon={<Hexagon className="size-4" />} accent="violet" />
         <StatCard label="Attendance" value="94.6%" delta={1.8} sub="Today" icon={<ClipboardCheck className="size-4" />} accent="success" />
@@ -46,11 +51,9 @@ function Dashboard() {
             <h2 className="font-display text-lg font-semibold">Realtime Alerts</h2>
             <span className="text-[10px] font-mono text-muted-foreground glass rounded-full px-2 py-1">12 today</span>
           </div>
-          <AlertCard severity="emergency" title="SOS Triggered" user="Maruf Nadaf · ID 4421" location="East Gate" time="just now" description="Distress signal received. Responders dispatched." />
-          <AlertCard severity="warning" title="Left Geofence" user="Anuja Naik · ID 3187" location="Campus A perimeter" time="2 min ago" />
-          <AlertCard severity="warning" title="Idle outside zone" user="Samidha Ghorpade · ID 2204" location="Library annex" time="6 min ago" />
-          <AlertCard severity="safe" title="Returned to zone" user="Tushar Dhanawade · ID 1109" location="Field" time="11 min ago" />
-          <AlertCard severity="safe" title="Attendance marked" user="Sameer Barathe · ID 0982" location="Block C" time="18 min ago" />
+          <div className="py-8 text-center text-muted-foreground glass rounded-2xl">
+            <p className="text-sm">No recent alerts</p>
+          </div>
         </div>
       </div>
 

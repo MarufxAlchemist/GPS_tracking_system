@@ -17,12 +17,18 @@ export type TrackerStatus =
       speed: number | null;
       /** ISO timestamp of the last successful Supabase upsert */
       lastSyncedAt: string | null;
+      /** Status of the Supabase sync */
+      syncStatus: "idle" | "syncing" | "success" | "error";
+      /** Error message if the last sync failed */
+      syncError: string | null;
     }
   | { status: "error"; code: GeolocationPositionError["code"]; message: string };
 
 export interface UseLocationTrackerOptions {
   /** Supabase row identifier — used as the upsert conflict key (`user_id`). */
   userId: string;
+  /** Optional username to display on the dashboard */
+  username?: string;
   /**
    * Minimum milliseconds between Supabase upserts.
    * Defaults to 5000 (5 s). Set to 0 to upsert on every position update.
@@ -70,6 +76,7 @@ const GEO_ERROR_MESSAGES: Record<number, string> = {
  */
 export function useLocationTracker({
   userId,
+  username,
   intervalMs = 5_000,
   onSync,
   onError,
@@ -104,9 +111,14 @@ export function useLocationTracker({
       const updatedAt = new Date().toISOString();
       console.log(`[useLocationTracker] Upserting location for user ${userId}:`, { latitude, longitude, updatedAt });
 
+      setTrackerStatus((prev) =>
+        prev.status === "tracking" ? { ...prev, syncStatus: "syncing", syncError: null } : prev
+      );
+
       const { error } = await supabase.from("live_locations").upsert(
         {
           user_id: userId,
+          username: username || null,
           latitude,
           longitude,
           updated_at: updatedAt,
@@ -119,6 +131,9 @@ export function useLocationTracker({
       if (error) {
         console.error("[useLocationTracker] Supabase upsert failed:", error.message, error);
         onErrorRef.current?.(error);
+        setTrackerStatus((prev) =>
+          prev.status === "tracking" ? { ...prev, syncStatus: "error", syncError: error.message } : prev
+        );
         return;
       }
 
@@ -129,7 +144,7 @@ export function useLocationTracker({
 
       setTrackerStatus((prev) =>
         prev.status === "tracking"
-          ? { ...prev, lastSyncedAt: updatedAt }
+          ? { ...prev, lastSyncedAt: updatedAt, syncStatus: "success", syncError: null }
           : prev,
       );
     },
@@ -176,6 +191,8 @@ export function useLocationTracker({
           heading,
           speed,
           lastSyncedAt: lastSyncedAtRef.current,
+          syncStatus: "idle",
+          syncError: null,
         });
 
         void upsertLocation(latitude, longitude);

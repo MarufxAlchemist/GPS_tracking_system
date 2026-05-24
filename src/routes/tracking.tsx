@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
-import type { LocationRow } from "@/components/live-tracking-map";
 import { useLocationTracker } from "@/hooks/use-location-tracker";
 import { ClientOnly } from "@/components/client-only";
 import { type GeofenceZone } from "@/lib/geofence";
-import { Search, Layers, Crosshair, Flame, MapPin, Activity, Navigation, AlertCircle, Users } from "lucide-react";
+import { Search, Layers, Crosshair, Flame, MapPin, Activity, Navigation, AlertCircle, Users, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { GenerateJoinLinkModal } from "@/components/generate-join-link-modal";
+import { supabase } from "@/lib/supabase";
+import { useLiveLocations } from "@/hooks/use-live-locations";
+
 
 // Leaflet map lazy-loaded so it never runs during SSR
 const LiveTrackingMap = lazy(() =>
@@ -57,11 +60,14 @@ function Tracking() {
   const [geoEnabled, setGeoEnabled] = useState(true);
   const [zones, setZones] = useState<GeofenceZone[]>([]);
   const [deviceId] = useState<string>(() => getDeviceId());
-  const [liveLocations, setLiveLocations] = useState<Map<string, LocationRow>>(new Map());
+  
+  const { locations: liveLocations, connectionStatus } = useLiveLocations();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [layerActive, setLayerActive] = useState(false);
   const [heatmapActive, setHeatmapActive] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   const { trackerStatus, start, stop } = useLocationTracker({
     userId: deviceId,
@@ -90,8 +96,15 @@ function Tracking() {
     }
   }, [trackerStatus, zones]);
 
-  const handleLocationsChange = useCallback((locs: Map<string, LocationRow>) => {
-    setLiveLocations(new Map(locs));
+  // Cleanup disconnected users (older than 15 mins)
+  useEffect(() => {
+    const cleanup = async () => {
+      const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      await supabase.from("live_locations").delete().lt("updated_at", fifteenMinsAgo);
+    };
+    cleanup();
+    const interval = setInterval(cleanup, 60000); // Check every minute
+    return () => clearInterval(interval);
   }, []);
 
   const allUsers = Array.from(liveLocations.values()).sort((a, b) => {
@@ -162,7 +175,8 @@ function Tracking() {
                 height={680}
                 highlightUserId={deviceId}
                 zones={zones}
-                onLocationsChange={handleLocationsChange}
+                locations={liveLocations}
+                connectionStatus={connectionStatus}
               />
             </Suspense>
           </ClientOnly>
@@ -186,84 +200,116 @@ function Tracking() {
 
         {/* Sidebar */}
         <aside className="space-y-4">
-          {/* Your location card */}
+          {/* Realtime GPS Debug Panel */}
           <div className="glass rounded-3xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Navigation className="size-4" style={{ color: "var(--cyan)" }} />
-              <span className="text-sm font-semibold font-display">Your Location</span>
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="size-4" style={{ color: "var(--cyan)" }} />
+              <span className="text-sm font-semibold font-display">Realtime GPS Debug</span>
             </div>
 
             {trackerStatus.status === "idle" && (
-              <button
-                onClick={() => setGeoEnabled(true)}
-                className="w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2.5"
-              >
-                Share Location
-              </button>
-            )}
-
-            {trackerStatus.status === "requesting" && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="size-4 rounded-full border border-cyan/40 border-t-cyan animate-spin" />
-                Requesting permission…
-              </div>
-            )}
-
-            {trackerStatus.status === "tracking" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--success)" }}>
-                  <span className="relative flex size-2">
-                    <span className="absolute inset-0 rounded-full bg-success pulse-ring opacity-80" />
-                    <span className="relative rounded-full bg-success size-2" />
-                  </span>
-                  Live · streaming
-                </div>
-                <div className="grid grid-cols-1 gap-1.5 font-mono text-[11px]">
-                  <div className="flex justify-between glass rounded-lg px-2.5 py-1.5">
-                    <span className="text-muted-foreground">LAT</span>
-                    <span style={{ color: "var(--cyan)" }}>{trackerStatus.latitude.toFixed(5)}°</span>
-                  </div>
-                  <div className="flex justify-between glass rounded-lg px-2.5 py-1.5">
-                    <span className="text-muted-foreground">LON</span>
-                    <span style={{ color: "var(--cyan)" }}>{trackerStatus.longitude.toFixed(5)}°</span>
-                  </div>
-                  <div className="flex justify-between glass rounded-lg px-2.5 py-1.5">
-                    <span className="text-muted-foreground">ACC</span>
-                    <span style={{ color: "var(--success)" }}>±{Math.round(trackerStatus.accuracy)}m</span>
-                  </div>
-                  {trackerStatus.heading !== null && (
-                    <div className="flex justify-between glass rounded-lg px-2.5 py-1.5">
-                      <span className="text-muted-foreground">HDG</span>
-                      <span>{Math.round(trackerStatus.heading)}°</span>
-                    </div>
-                  )}
-                  {trackerStatus.lastSyncedAt && (
-                    <div className="flex justify-between glass rounded-lg px-2.5 py-1.5">
-                      <span className="text-muted-foreground">SYNC</span>
-                      <span>{new Date(trackerStatus.lastSyncedAt).toLocaleTimeString()}</span>
-                    </div>
-                  )}
+              <div className="flex flex-col gap-3">
+                <div className="text-xs text-muted-foreground bg-white/5 p-3 rounded-xl border border-border/50">
+                  Tracking is currently inactive. Enable it to begin broadcasting GPS telemetry.
                 </div>
                 <button
-                  onClick={() => setGeoEnabled(false)}
-                  className="w-full rounded-xl glass py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition"
+                  onClick={() => setGeoEnabled(true)}
+                  className="w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2.5 hover:scale-[1.02] transition"
                 >
-                  Stop sharing
+                  Start Live Tracking
                 </button>
               </div>
             )}
 
+            {trackerStatus.status === "requesting" && (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-cyan/10 border border-cyan/20">
+                <div className="size-4 rounded-full border-2 border-cyan/40 border-t-cyan animate-spin shrink-0" />
+                <span className="text-xs text-cyan font-medium">Awaiting GPS permission…</span>
+              </div>
+            )}
+
             {trackerStatus.status === "error" && (
-              <div className="space-y-2">
-                <div className="flex items-start gap-1.5 p-2 rounded-lg bg-danger/10 border border-danger/20">
-                  <AlertCircle className="size-3.5 shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
-                  <p className="text-[11px]" style={{ color: "var(--danger)" }}>{trackerStatus.message}</p>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/10 border border-danger/20">
+                  <AlertCircle className="size-4 shrink-0 mt-0.5 text-danger" />
+                  <div className="space-y-1 text-xs">
+                    <p className="font-semibold text-danger">Permission Denied / Error</p>
+                    <p className="text-danger/80 leading-relaxed">{trackerStatus.message}</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => { setGeoEnabled(false); setTimeout(() => setGeoEnabled(true), 100); }}
-                  className="w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2"
+                  className="w-full rounded-xl gradient-primary text-primary-foreground text-xs font-semibold py-2.5 hover:scale-[1.02] transition"
                 >
-                  Retry
+                  Retry GPS Access
+                </button>
+              </div>
+            )}
+
+            {trackerStatus.status === "tracking" && (
+              <div className="space-y-3">
+                {/* State Badges */}
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-success/15 border border-success/30 text-[10px] font-semibold text-success uppercase tracking-wider">
+                    <span className="relative flex size-1.5">
+                      <span className="absolute inset-0 rounded-full bg-success pulse-ring opacity-80" />
+                      <span className="relative rounded-full bg-success size-1.5" />
+                    </span>
+                    Tracking Active
+                  </div>
+
+                  {trackerStatus.syncStatus === "syncing" && (
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-cyan/10 border border-cyan/30 text-[10px] font-semibold text-cyan uppercase tracking-wider">
+                      <Navigation className="size-3 animate-spin" /> Upserting
+                    </div>
+                  )}
+                  {trackerStatus.syncStatus === "success" && (
+                    <div className="px-2.5 py-1 rounded-md bg-success/10 border border-success/30 text-[10px] font-semibold text-success uppercase tracking-wider">
+                      Sync OK
+                    </div>
+                  )}
+                  {trackerStatus.syncStatus === "error" && (
+                    <div className="px-2.5 py-1 rounded-md bg-danger/10 border border-danger/30 text-[10px] font-semibold text-danger uppercase tracking-wider">
+                      Sync Failed
+                    </div>
+                  )}
+                </div>
+
+                {/* Telemetry Grid */}
+                <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
+                  <div className="bg-black/20 rounded-xl px-3 py-2 border border-border/40">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">Latitude</span>
+                    <span className="text-white">{trackerStatus.latitude.toFixed(6)}°</span>
+                  </div>
+                  <div className="bg-black/20 rounded-xl px-3 py-2 border border-border/40">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">Longitude</span>
+                    <span className="text-white">{trackerStatus.longitude.toFixed(6)}°</span>
+                  </div>
+                  <div className="bg-black/20 rounded-xl px-3 py-2 border border-border/40">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">GPS Acc</span>
+                    <span className="text-success">±{Math.round(trackerStatus.accuracy)}m</span>
+                  </div>
+                  <div className="bg-black/20 rounded-xl px-3 py-2 border border-border/40">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground block mb-0.5">Database Sync</span>
+                    <span className={trackerStatus.syncStatus === "error" ? "text-danger" : "text-cyan"}>
+                      {trackerStatus.lastSyncedAt ? new Date(trackerStatus.lastSyncedAt).toLocaleTimeString() : "Pending…"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sync Error Detail */}
+                {trackerStatus.syncStatus === "error" && trackerStatus.syncError && (
+                  <div className="p-2.5 rounded-lg bg-danger/10 border border-danger/20 text-[10px] text-danger mt-1">
+                    <span className="font-semibold block mb-0.5">Insert Failed:</span>
+                    {trackerStatus.syncError}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setGeoEnabled(false)}
+                  className="w-full mt-2 rounded-xl glass py-2 text-[11px] font-medium text-muted-foreground hover:text-white hover:bg-white/10 transition border border-border/50"
+                >
+                  Stop Debug Session
                 </button>
               </div>
             )}
@@ -305,9 +351,13 @@ function Tracking() {
                 <Users className="size-4" style={{ color: "var(--cyan)" }} />
                 <h3 className="font-display font-semibold text-sm">Active Users</h3>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {filteredUsers.length}/{trackedCount} shown
-              </span>
+              <button 
+                onClick={() => setJoinModalOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan/10 hover:bg-cyan/20 text-cyan text-[10px] font-semibold uppercase tracking-wider transition"
+              >
+                <LinkIcon className="size-3" />
+                Invite
+              </button>
             </div>
 
             {filteredUsers.length === 0 ? (
@@ -349,7 +399,7 @@ function Tracking() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate" style={{ color: isYou ? "var(--cyan)" : undefined }}>
-                          {isYou ? "You (Live)" : `User ${shortId(loc.user_id)}`}
+                          {isYou ? "You (Live)" : loc.username || `User ${shortId(loc.user_id)}`}
                         </div>
                         <div className="text-[10px] text-muted-foreground font-mono">
                           {loc.latitude.toFixed(3)}°, {loc.longitude.toFixed(3)}°{" · "}
@@ -369,6 +419,8 @@ function Tracking() {
           </div>
         </aside>
       </div>
+      
+      <GenerateJoinLinkModal open={joinModalOpen} onClose={() => setJoinModalOpen(false)} />
     </DashboardShell>
   );
 }

@@ -12,15 +12,7 @@ export interface Notification {
   read: boolean;
 }
 
-const DEFAULT_NOTIFICATIONS: Notification[] = [
-  { id: "n1", severity: "emergency", title: "SOS Triggered", user: "Maruf Nadaf · ID 4421", location: "East Gate", time: "just now", read: false },
-  { id: "n2", severity: "emergency", title: "Device went dark", user: "Gautam Iyengar · ID 3001", location: "Hostel Block C", time: "3 min ago", read: false },
-  { id: "n3", severity: "warning", title: "Left Geofence", user: "Anuja Naik · ID 3187", location: "Campus A perimeter", time: "6 min ago", read: false },
-  { id: "n4", severity: "warning", title: "Idle outside zone", user: "Samidha Ghorpade · ID 2204", location: "Library annex", time: "11 min ago", read: true },
-  { id: "n5", severity: "warning", title: "Battery critical", user: "Harsh Joshi · ID 5511", location: "Field", time: "22 min ago", read: true },
-  { id: "n6", severity: "safe", title: "Returned to zone", user: "Tushar Dhanawade · ID 1109", location: "Field", time: "31 min ago", read: true },
-  { id: "n7", severity: "safe", title: "Attendance marked", user: "Sameer Barathe · ID 0982", location: "Block C", time: "42 min ago", read: true },
-];
+const DEFAULT_NOTIFICATIONS: Notification[] = [];
 
 interface Props {
   open: boolean;
