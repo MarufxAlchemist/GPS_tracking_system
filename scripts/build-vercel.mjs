@@ -1,5 +1,5 @@
 /**
- * Vercel Build Output API builder for TanStack Start
+ * Vercel Build Output API builder for TanStack Start.
  * 
  * TanStack Start v1 builds to dist/client + dist/server.
  * Vercel expects .vercel/output/ with static/, functions/, and config.json
