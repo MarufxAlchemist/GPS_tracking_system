@@ -18,7 +18,7 @@ execSync("npx vite build", { cwd: root, stdio: "inherit", env: { ...process.env,
 
 const outputDir = join(root, ".vercel", "output");
 
-// Clean previous output
+// Clean previous output.
 if (existsSync(outputDir)) {
   rmSync(outputDir, { recursive: true, force: true });
 }
