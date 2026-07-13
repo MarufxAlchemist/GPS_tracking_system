@@ -89,7 +89,7 @@ function Alerts() {
         ))}
       </div>
 
-      {/* Alert list */}
+      {/* Alert list. */}
       <div className="mt-4 grid lg:grid-cols-2 gap-4">
         {filtered.length === 0 ? (
           <div className="lg:col-span-2 py-16 text-center text-muted-foreground">
