@@ -2,7 +2,7 @@
  * Vercel Build Output API builder for TanStack Start
  * 
  * TanStack Start v1 builds to dist/client + dist/server.
- * Vercel expects .vercel/output/ with static/, functions/, and config.json.
+ * Vercel expects .vercel/output/ with static/, functions/, and config.json
  * This script bridges the gap.
  */
 import { execSync } from "child_process";
