@@ -77,7 +77,7 @@ writeFileSync(
       routes: [
         // Try static files first (CSS, JS, images, etc.)
         { handle: "filesystem" },
-        // Everything else goes to the SSR function
+        // Everything else goes to the SSR function.
         { src: "/(.*)", dest: "/" },
       ],
     },
