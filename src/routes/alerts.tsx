@@ -107,7 +107,7 @@ function Alerts() {
                 time={alert.time}
                 description={alert.description}
               />
-              {/* Status badge & action buttons */}
+              {/* Status badge & action buttons. */}
               <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
                 {alert.status === "acknowledged" && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan/20 text-cyan border border-cyan/30">
